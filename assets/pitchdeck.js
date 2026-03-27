@@ -14,6 +14,12 @@
         if (form)     form.addEventListener('submit', handleUpload);
         if (audioBtn) audioBtn.addEventListener('click', handleGenerateAudio);
         if (videoBtn) videoBtn.addEventListener('click', handleGenerateVideo);
+
+        document.addEventListener('click', function (e) {
+            if (e.target.matches('.pitchdeck-generate-slide-audio-btn')) {
+                handleGenerateSlideAudio(parseInt(e.target.dataset.slide, 10));
+            }
+        });
     });
 
     /**
@@ -134,10 +140,79 @@
                     id="script-text-${item.slide_number}"
                     class="pitchdeck-script-textarea"
                     rows="4"
-                >${escapeHtml(item.script_text || '')}</textarea>`;
+                >${escapeHtml(item.script_text || '')}</textarea>
+                <button class="pitchdeck-generate-slide-audio-btn" data-slide="${item.slide_number}">Generate VO for this slide</button>`;
 
             container.appendChild(card);
         });
+    }
+
+    /**
+     * Collect current textarea values as [{slide_number, script_text}].
+     */
+    function collectScripts() {
+        return Array.from(document.querySelectorAll('.pitchdeck-script-textarea')).map(function (ta) {
+            return {
+                slide_number: parseInt(ta.id.replace('script-text-', ''), 10),
+                script_text:  ta.value,
+            };
+        });
+    }
+
+    /**
+     * Attach an audio player to a slide card.
+     */
+    function attachAudioPlayer(item) {
+        const card = document.getElementById(`script-text-${item.slide_number}`);
+        if (!card) return;
+        const existing = document.getElementById(`audio-player-${item.slide_number}`);
+        if (existing) existing.remove();
+        const player = document.createElement('audio');
+        player.id       = `audio-player-${item.slide_number}`;
+        player.controls = true;
+        player.src      = item.audio_url;
+        card.parentNode.appendChild(player);
+    }
+
+    /**
+     * Generate VO for a single slide using the current textarea value.
+     */
+    async function handleGenerateSlideAudio(slideNumber) {
+        if (!currentJobId) {
+            setStatus('No job loaded. Please upload and save slides first.', 'error');
+            return;
+        }
+
+        const btn = document.querySelector(`.pitchdeck-generate-slide-audio-btn[data-slide="${slideNumber}"]`);
+        if (btn) btn.disabled = true;
+
+        setStatus(`Generating voiceover for slide ${slideNumber}\u2026`, 'info');
+
+        const scripts = collectScripts();
+
+        try {
+            const response = await fetch(`${rest_url}/generate-audio`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+                body: JSON.stringify({ job_id: currentJobId, slide_number: slideNumber, scripts }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setStatus(`Audio generation failed: ${data.message || 'Unknown error.'}`, 'error');
+                return;
+            }
+
+            data.audio.forEach(attachAudioPlayer);
+            setStatus(`Voiceover generated for slide ${slideNumber}.`, 'success');
+
+        } catch (err) {
+            setStatus('Network error during audio generation. Please try again.', 'error');
+            console.error('Pitchdeck audio error:', err);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
     }
 
     /**
@@ -152,35 +227,11 @@
         const audioBtn = document.getElementById('pitchdeck-audio-btn');
         audioBtn.disabled = true;
 
-        // Collect and save edited script texts before generating audio.
-        const scriptTextareas = document.querySelectorAll('.pitchdeck-script-textarea');
-        if (scriptTextareas.length > 0) {
-            setStatus('Saving edited scripts\u2026', 'info');
-            const scripts = Array.from(scriptTextareas).map(function (ta) {
-                const slideNumber = parseInt(ta.id.replace('script-text-', ''), 10);
-                return { slide_number: slideNumber, script_text: ta.value };
-            });
-
-            try {
-                const saveResp = await fetch(`${rest_url}/save-scripts`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                    body: JSON.stringify({ job_id: currentJobId, scripts }),
-                });
-                if (!saveResp.ok) {
-                    const saveData = await saveResp.json();
-                    setStatus(`Failed to save scripts: ${saveData.message || 'Unknown error.'}`, 'error');
-                    audioBtn.disabled = false;
-                    return;
-                }
-            } catch (err) {
-                setStatus('Network error saving scripts. Please try again.', 'error');
-                audioBtn.disabled = false;
-                return;
-            }
-        }
-
         setStatus('Generating voiceover audio via OpenAI\u2026 this may take a while.', 'info');
+
+        // Pass current textarea values directly so the backend uses what the user sees,
+        // not a potentially stale version from the database.
+        const scripts = collectScripts();
 
         try {
             const response = await fetch(`${rest_url}/generate-audio`, {
@@ -189,7 +240,7 @@
                     'Content-Type': 'application/json',
                     'X-WP-Nonce':   nonce,
                 },
-                body: JSON.stringify({ job_id: currentJobId }),
+                body: JSON.stringify({ job_id: currentJobId, scripts }),
             });
 
             const data = await response.json();
@@ -199,17 +250,7 @@
                 return;
             }
 
-            data.audio.forEach(function (item) {
-                const card = document.getElementById(`script-text-${item.slide_number}`);
-                if (!card) return;
-                const existing = document.getElementById(`audio-player-${item.slide_number}`);
-                if (existing) existing.remove();
-                const player = document.createElement('audio');
-                player.id       = `audio-player-${item.slide_number}`;
-                player.controls = true;
-                player.src      = item.audio_url;
-                card.parentNode.appendChild(player);
-            });
+            data.audio.forEach(attachAudioPlayer);
 
             setStatus(`Voiceover audio generated for ${data.audio.length} slide(s). You can now generate the video.`, 'success');
 

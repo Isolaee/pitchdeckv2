@@ -74,6 +74,14 @@ class Pitchdeck_REST_API {
                     'type'              => 'string',
                     'sanitize_callback' => 'sanitize_text_field',
                 ],
+                'slide_number' => [
+                    'required' => false,
+                    'type'     => 'integer',
+                ],
+                'scripts' => [
+                    'required' => false,
+                    'type'     => 'array',
+                ],
             ],
         ] );
 
@@ -430,15 +438,33 @@ class Pitchdeck_REST_API {
     /**
      * POST /wp-json/pitchdeck/v1/generate-audio
      *
-     * Accepts: application/json { job_id: string }
+     * Accepts: application/json {
+     *   job_id: string,
+     *   slide_number?: int,          // generate only this slide
+     *   scripts?: [{slide_number, script_text}]  // use these texts instead of DB
+     * }
      * Returns: { success: bool, audio: [{slide_number, audio_url}, ...] }
      */
     public static function handle_generate_audio( WP_REST_Request $request ) {
-        $job_id = $request->get_param( 'job_id' );
+        $job_id       = $request->get_param( 'job_id' );
+        $only_slide   = $request->get_param( 'slide_number' );
+        $scripts_param = $request->get_param( 'scripts' );
+
         $slides = Pitchdeck_DB::get_slides_by_job( $job_id );
 
         if ( empty( $slides ) ) {
             return new WP_Error( 'no_slides', 'No slides found for this job. Save slides first.', [ 'status' => 404 ] );
+        }
+
+        // Build a map of slide_number => script_text from the request if provided.
+        $script_overrides = [];
+        if ( is_array( $scripts_param ) ) {
+            foreach ( $scripts_param as $item ) {
+                $num = (int) ( $item['slide_number'] ?? 0 );
+                if ( $num > 0 ) {
+                    $script_overrides[ $num ] = $item['script_text'] ?? '';
+                }
+            }
         }
 
         $upload_dir = wp_upload_dir();
@@ -451,11 +477,26 @@ class Pitchdeck_REST_API {
         $output = [];
         foreach ( $slides as $slide ) {
             $slide_number = (int) $slide->slide_number;
-            $script_text  = trim( $slide->script_text );
+
+            // Skip slides not requested when generating a single slide.
+            if ( null !== $only_slide && $slide_number !== (int) $only_slide ) {
+                continue;
+            }
+
+            // Prefer the script text from the request (what the user currently sees);
+            // fall back to what is stored in the DB.
+            if ( array_key_exists( $slide_number, $script_overrides ) ) {
+                $script_text = trim( $script_overrides[ $slide_number ] );
+            } else {
+                $script_text = trim( $slide->script_text );
+            }
 
             if ( empty( $script_text ) ) {
                 continue;
             }
+
+            // Persist the (possibly edited) script text so the DB stays in sync.
+            Pitchdeck_DB::save_scripts( $job_id, [ $slide_number => $script_text ] );
 
             try {
                 $audio_binary = Pitchdeck_OpenAI::generate_audio( $script_text );
