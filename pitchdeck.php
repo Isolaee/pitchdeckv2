@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Pitchdeck
  * Description: Upload a PPTX, extract slide text, add notes per slide, generate voiceover scripts.
- * Version:     0.1.1
+ * Version:     0.1.2
  * Author:      Eero Isola
  * Text Domain: pitchdeck
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PITCHDECK_VERSION',    '0.1.0' );
+define( 'PITCHDECK_VERSION',    '0.1.2' );
 define( 'PITCHDECK_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PITCHDECK_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
