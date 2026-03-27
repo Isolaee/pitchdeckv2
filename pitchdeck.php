@@ -76,12 +76,12 @@ function pitchdeck_shortcode_render( array $atts ): string {
     <div id="pitchdeck-app">
 
         <!-- Step indicator -->
-        <ol class="pd-steps">
-            <li class="pd-step pd-step--active" data-step="1"><span class="pd-step-circle">1</span><span class="pd-step-label">Start</span></li>
-            <li class="pd-step" data-step="2"><span class="pd-step-circle">2</span><span class="pd-step-label">Upload</span></li>
-            <li class="pd-step" data-step="3"><span class="pd-step-circle">3</span><span class="pd-step-label">Scripts</span></li>
-            <li class="pd-step" data-step="4"><span class="pd-step-circle">4</span><span class="pd-step-label">Video</span></li>
-        </ol>
+        <nav class="pd-steps">
+            <div class="pd-step pd-step--active" data-step="1"><span class="pd-step-circle">1</span><span class="pd-step-label">Start</span></div>
+            <div class="pd-step" data-step="2"><span class="pd-step-circle">2</span><span class="pd-step-label">Upload</span></div>
+            <div class="pd-step" data-step="3"><span class="pd-step-circle">3</span><span class="pd-step-label">Scripts</span></div>
+            <div class="pd-step" data-step="4"><span class="pd-step-circle">4</span><span class="pd-step-label">Video</span></div>
+        </nav>
 
         <!-- Status message (lives outside panels so position stays fixed) -->
         <div id="pitchdeck-status" class="pitchdeck-status" hidden></div>

@@ -1,8 +1,8 @@
 /* ── Pitchdeck plugin styles ──────────────────────────────────────── */
 
 :root {
-    --pd-accent:    #4f46e5;
-    --pd-accent-h:  #4338ca;
+    --pd-accent:    #475bb2;
+    --pd-accent-h:  #3a4ea0;
     --pd-success:   #16a34a;
     --pd-success-h: #15803d;
     --pd-error:     #dc2626;
@@ -106,17 +106,17 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 2px solid var(--pd-border);
-    background: var(--pd-surface);
+    border: 2px solid #94a3b8;
+    background: #94a3b8;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: .78rem;
     font-weight: 700;
-    color: var(--pd-muted);
+    color: #fff;
     position: relative;
     z-index: 1;
-    transition: background .2s, border-color .2s, color .2s;
+    transition: background .2s, border-color .2s;
 }
 
 .pd-step-label {
