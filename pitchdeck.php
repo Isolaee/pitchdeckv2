@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Pitchdeck
  * Description: Upload a PPTX, extract slide text, add notes per slide, generate voiceover scripts.
- * Version:     0.1.0
- * Author:      GR
+ * Version:     0.1.1
+ * Author:      Eero Isola
  * Text Domain: pitchdeck
  */
 
