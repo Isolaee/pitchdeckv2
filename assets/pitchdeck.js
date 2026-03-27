@@ -27,6 +27,9 @@
             if (e.target.matches('.pitchdeck-generate-slide-audio-btn')) {
                 handleGenerateSlideAudio(parseInt(e.target.dataset.slide, 10));
             }
+            if (e.target.matches('.pd-voice-preview-btn')) {
+                handleVoicePreview(e.target.dataset.voice, e.target);
+            }
         });
 
         wireDropzone();
@@ -205,8 +208,44 @@
     }
 
     function selectedVoice() {
-        const el = document.getElementById('pitchdeck-voice');
-        return el ? el.value : 'alloy';
+        const checked = document.querySelector('input[name="pitchdeck-voice"]:checked');
+        return checked ? checked.value : 'alloy';
+    }
+
+    // Cache of voice -> Audio object so repeated previews don't re-fetch.
+    const voiceAudioCache = {};
+
+    async function handleVoicePreview(voice, btn) {
+        // If already loaded, just replay.
+        if (voiceAudioCache[voice]) {
+            voiceAudioCache[voice].currentTime = 0;
+            voiceAudioCache[voice].play();
+            return;
+        }
+
+        btn.classList.add('is-loading');
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch(rest_url + '/preview-voice?voice=' + encodeURIComponent(voice), {
+                headers: { 'X-WP-Nonce': nonce },
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                setStatus('Ääninäytteen lataus epäonnistui: ' + (data.message || 'Tuntematon virhe.'), 'error');
+                return;
+            }
+
+            const audio = new Audio(data.url);
+            voiceAudioCache[voice] = audio;
+            audio.play();
+        } catch (err) {
+            setStatus('Verkkovirhe ääninäytteen latauksessa.', 'error');
+        } finally {
+            btn.classList.remove('is-loading');
+            btn.disabled = false;
+        }
     }
 
     function collectScripts() {

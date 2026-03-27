@@ -74,6 +74,19 @@ class Pitchdeck_REST_API {
             ],
         ] );
 
+        register_rest_route( self::NAMESPACE, '/preview-voice', [
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [ __CLASS__, 'handle_preview_voice' ],
+            'permission_callback' => [ __CLASS__, 'check_permissions' ],
+            'args'                => [
+                'voice' => [
+                    'required'          => true,
+                    'type'              => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
+            ],
+        ] );
+
         register_rest_route( self::NAMESPACE, '/save-slides', [
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => [ __CLASS__, 'handle_save_slides' ],
@@ -470,6 +483,47 @@ class Pitchdeck_REST_API {
             'success' => true,
             'audio'   => $output,
         ] );
+    }
+
+    /**
+     * GET /wp-json/pitchdeck/v1/preview-voice?voice=alloy
+     *
+     * Returns a URL to a short sample MP3 for the requested voice.
+     * The file is generated once and cached on disk; subsequent calls return the cached URL.
+     */
+    public static function handle_preview_voice( WP_REST_Request $request ) {
+        $allowed = [ 'alloy', 'echo', 'fable', 'nova', 'onyx', 'shimmer' ];
+        $voice   = $request->get_param( 'voice' );
+
+        if ( ! in_array( $voice, $allowed, true ) ) {
+            return new WP_Error( 'invalid_voice', 'Invalid voice name.', [ 'status' => 400 ] );
+        }
+
+        $upload_dir  = wp_upload_dir();
+        $sample_dir  = trailingslashit( $upload_dir['basedir'] ) . 'pitchdeck/voice-samples/';
+        $sample_url  = trailingslashit( $upload_dir['baseurl'] ) . 'pitchdeck/voice-samples/';
+        $sample_file = $sample_dir . $voice . '.mp3';
+
+        // Serve the cached file if it already exists.
+        if ( file_exists( $sample_file ) ) {
+            return rest_ensure_response( [ 'url' => $sample_url . $voice . '.mp3' ] );
+        }
+
+        wp_mkdir_p( $sample_dir );
+
+        $sample_text = 'Tervetuloa esitykseen. Tämä on esimerkki äänestä, jonka voit valita selostuksellesi.';
+
+        try {
+            $audio_binary = Pitchdeck_OpenAI::generate_audio( $sample_text, $voice );
+        } catch ( RuntimeException $e ) {
+            return new WP_Error( 'tts_error', $e->getMessage(), [ 'status' => 502 ] );
+        }
+
+        if ( false === file_put_contents( $sample_file, $audio_binary ) ) {
+            return new WP_Error( 'file_write_error', 'Could not save sample audio.', [ 'status' => 500 ] );
+        }
+
+        return rest_ensure_response( [ 'url' => $sample_url . $voice . '.mp3' ] );
     }
 
     /**

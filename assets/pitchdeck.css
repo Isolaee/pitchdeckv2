@@ -349,6 +349,93 @@
     box-shadow: 0 0 0 3px rgba(79,70,229,.12);
 }
 
+/* ── Voice picker ────────────────────────────────────────────────── */
+
+.pd-form-group {
+    margin-bottom: 24px;
+}
+
+.pd-form-group > .pd-label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.pd-voice-picker {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.pd-voice-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid var(--pd-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+
+.pd-voice-option:has(input:checked) {
+    border-color: var(--pd-accent);
+    background: #eef2ff;
+}
+
+.pd-voice-option input[type="radio"] {
+    display: none;
+}
+
+.pd-voice-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.pd-voice-name {
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--pd-text);
+}
+
+.pd-voice-desc {
+    font-size: .75rem;
+    color: var(--pd-muted);
+}
+
+.pd-voice-preview-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--pd-border);
+    background: var(--pd-surface);
+    color: var(--pd-accent);
+    font-size: .7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+    padding: 0;
+}
+
+.pd-voice-preview-btn:hover {
+    background: var(--pd-accent);
+    color: #fff;
+    border-color: var(--pd-accent);
+}
+
+.pd-voice-preview-btn.is-loading {
+    opacity: .5;
+    cursor: wait;
+}
+
+@media (max-width: 560px) {
+    .pd-voice-picker { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ── Buttons ─────────────────────────────────────────────────────── */
 
 .pd-btn {

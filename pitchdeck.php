@@ -123,16 +123,31 @@ function pitchdeck_shortcode_render( array $atts ): string {
                         <option value="Swedish">Swedish</option>
                     </select>
                 </div>
-                <div class="pd-form-row">
-                    <label for="pitchdeck-voice" class="pd-label">Ääni</label>
-                    <select id="pitchdeck-voice" class="pd-select">
-                        <option value="alloy">Alloy — neutraali</option>
-                        <option value="echo">Echo — miehen ääni</option>
-                        <option value="fable">Fable — ilmekäs</option>
-                        <option value="nova">Nova — naisen ääni</option>
-                        <option value="onyx">Onyx — arvovaltainen</option>
-                        <option value="shimmer">Shimmer — pehmeä</option>
-                    </select>
+                <div class="pd-form-group">
+                    <label class="pd-label">Ääni</label>
+                    <div class="pd-voice-picker">
+                        <?php
+                        $voices = [
+                            'alloy'   => [ 'Alloy',   'Neutraali' ],
+                            'echo'    => [ 'Echo',    'Miehen ääni' ],
+                            'fable'   => [ 'Fable',   'Ilmekäs' ],
+                            'nova'    => [ 'Nova',    'Naisen ääni' ],
+                            'onyx'    => [ 'Onyx',    'Arvovaltainen' ],
+                            'shimmer' => [ 'Shimmer', 'Pehmeä' ],
+                        ];
+                        $first = true;
+                        foreach ( $voices as $val => [ $name, $desc ] ) :
+                        ?>
+                        <label class="pd-voice-option">
+                            <input type="radio" name="pitchdeck-voice" value="<?php echo esc_attr( $val ); ?>"<?php echo $first ? ' checked' : ''; ?> />
+                            <span class="pd-voice-info">
+                                <span class="pd-voice-name"><?php echo esc_html( $name ); ?></span>
+                                <span class="pd-voice-desc"><?php echo esc_html( $desc ); ?></span>
+                            </span>
+                            <button type="button" class="pd-voice-preview-btn" data-voice="<?php echo esc_attr( $val ); ?>" title="Kuuntele">&#9654;</button>
+                        </label>
+                        <?php $first = false; endforeach; ?>
+                    </div>
                 </div>
                 <button type="submit" class="pd-btn pd-btn--primary">Luo skriptit</button>
             </form>
