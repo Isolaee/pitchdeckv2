@@ -1,188 +1,514 @@
-/* pitchdeck.css */
+/* ── Pitchdeck plugin styles ──────────────────────────────────────── */
 
-#pitchdeck-app {
-    max-width: 860px;
-    font-family: inherit;
+:root {
+    --pd-accent:    #4f46e5;
+    --pd-accent-h:  #4338ca;
+    --pd-success:   #16a34a;
+    --pd-success-h: #15803d;
+    --pd-error:     #dc2626;
+    --pd-bg:        #f8fafc;
+    --pd-surface:   #ffffff;
+    --pd-border:    #e2e8f0;
+    --pd-text:      #1e293b;
+    --pd-muted:     #64748b;
+    --pd-radius:    10px;
+    --pd-shadow:    0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
 }
 
-/* Upload form */
-#pitchdeck-upload-form {
+#pitchdeck-app {
+    position: relative;
+    max-width: 740px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--pd-text);
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* ── Loading overlay ─────────────────────────────────────────────── */
+
+#pd-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+#pd-overlay[hidden] { display: none; }
+
+.pd-overlay-box {
+    background: var(--pd-surface);
+    border-radius: var(--pd-radius);
+    padding: 36px 48px;
+    text-align: center;
+    min-width: 220px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+
+.pd-spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid var(--pd-border);
+    border-top-color: var(--pd-accent);
+    border-radius: 50%;
+    animation: pd-spin .75s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes pd-spin { to { transform: rotate(360deg); } }
+
+#pd-overlay-msg {
+    margin: 0;
+    font-size: .9rem;
+    color: var(--pd-muted);
+    font-weight: 500;
+}
+
+/* ── Step indicator ──────────────────────────────────────────────── */
+
+.pd-steps {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 32px;
+}
+
+.pd-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+/* Connector line: runs from center of previous circle to center of this circle */
+.pd-step + .pd-step::before {
+    content: '';
+    position: absolute;
+    top: 14px; /* half of circle height */
+    left: -50%;
+    right: 50%;
+    height: 2px;
+    background: var(--pd-border);
+    z-index: 0;
+    transition: background .3s;
+}
+
+.pd-step--done + .pd-step::before,
+.pd-step--active::before {
+    background: var(--pd-accent);
+}
+
+.pd-step-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--pd-border);
+    background: var(--pd-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--pd-muted);
+    position: relative;
+    z-index: 1;
+    transition: background .2s, border-color .2s, color .2s;
+}
+
+.pd-step-label {
+    font-size: .72rem;
+    font-weight: 500;
+    color: var(--pd-muted);
+    white-space: nowrap;
+    transition: color .2s;
+}
+
+.pd-step--active .pd-step-circle {
+    background: var(--pd-accent);
+    border-color: var(--pd-accent);
+    color: #fff;
+}
+
+.pd-step--active .pd-step-label {
+    color: var(--pd-accent);
+    font-weight: 600;
+}
+
+.pd-step--done .pd-step-circle {
+    background: var(--pd-accent);
+    border-color: var(--pd-accent);
+    color: #fff;
+}
+
+.pd-step--done .pd-step-label {
+    color: var(--pd-accent);
+}
+
+/* ── Status bar ──────────────────────────────────────────────────── */
+
+#pitchdeck-status[hidden] { display: none; }
+
+.pitchdeck-status {
+    padding: 10px 14px;
+    margin: 0 0 20px;
+    border-radius: 6px;
+    font-size: .875rem;
+    line-height: 1.4;
+    border: 1px solid transparent;
+}
+
+.pitchdeck-status--info    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.pitchdeck-status--success { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.pitchdeck-status--error   { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+
+/* ── Panels ──────────────────────────────────────────────────────── */
+
+.pd-panel {
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
+    border-radius: var(--pd-radius);
+    padding: 40px;
+    box-shadow: var(--pd-shadow);
+}
+
+.pd-panel[hidden] { display: none; }
+
+.pd-panel > h2 {
+    margin: 0 0 6px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--pd-text);
+}
+
+.pd-subtitle {
+    margin: 0 0 24px;
+    color: var(--pd-muted);
+    font-size: .9rem;
+}
+
+/* ── Landing panel ───────────────────────────────────────────────── */
+
+.pd-hero {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.pd-hero h2 {
+    margin: 0 0 10px;
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--pd-text);
+    line-height: 1.25;
+}
+
+.pd-hero p {
+    margin: 0;
+    color: var(--pd-muted);
+    font-size: .95rem;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.pd-process {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 36px;
+}
+
+.pd-process-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    background: var(--pd-bg);
+    border: 1px solid var(--pd-border);
+    border-radius: var(--pd-radius);
+    padding: 20px 14px;
+}
+
+.pd-process-n {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--pd-accent);
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pd-process-item strong {
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--pd-text);
+}
+
+.pd-process-item span {
+    font-size: .78rem;
+    color: var(--pd-muted);
+    line-height: 1.35;
+}
+
+.pd-hero-action {
+    text-align: center;
+}
+
+/* ── Dropzone ────────────────────────────────────────────────────── */
+
+.pd-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--pd-border);
+    border-radius: var(--pd-radius);
+    padding: 44px 24px;
+    cursor: pointer;
+    text-align: center;
+    background: var(--pd-bg);
+    margin-bottom: 24px;
+    transition: border-color .2s, background .2s;
+}
+
+.pd-dropzone:hover,
+.pd-dropzone.pd-dropzone--over {
+    border-color: var(--pd-accent);
+    background: #eef2ff;
+}
+
+.pd-dropzone input[type="file"] {
+    display: none;
+}
+
+.pd-dropzone-icon {
+    width: 44px;
+    height: 44px;
+    color: var(--pd-muted);
+    margin-bottom: 10px;
+}
+
+.pd-dropzone-text {
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--pd-text);
+}
+
+.pd-dropzone-hint {
+    font-size: .8rem;
+    color: var(--pd-muted);
+    margin-top: 2px;
+}
+
+.pd-dropzone-filename {
+    font-size: .85rem;
+    color: var(--pd-accent);
+    font-weight: 600;
+    margin-top: 10px;
+    word-break: break-all;
+}
+
+/* ── Form elements ───────────────────────────────────────────────── */
+
+.pd-form-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
 }
 
-#pitchdeck-upload-form label {
+.pd-label {
+    font-size: .875rem;
     font-weight: 600;
+    color: var(--pd-text);
+    white-space: nowrap;
 }
 
-#pitchdeck-upload-form button[type="submit"] {
-    padding: 8px 20px;
-    background: #0073aa;
-    color: #fff;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-#pitchdeck-upload-form button[type="submit"]:hover {
-    background: #005a87;
-}
-
-/* Status message */
-.pitchdeck-status {
-    padding: 10px 14px;
-    margin: 12px 0;
-    border-radius: 3px;
-    font-size: 0.9rem;
-}
-
-.pitchdeck-status--info    { background: #e8f0fe; color: #1a73e8; }
-.pitchdeck-status--success { background: #e6f4ea; color: #1e8e3e; }
-.pitchdeck-status--error   { background: #fce8e6; color: #c5221f; }
-
-/* Slide cards */
-.pitchdeck-slide {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 16px;
-    margin-bottom: 16px;
-    background: #fafafa;
-}
-
-.pitchdeck-slide h3 {
-    margin: 0 0 10px;
-    font-size: 1rem;
-    color: #333;
-}
-
-.pitchdeck-slide-text strong {
-    display: block;
-    margin-bottom: 4px;
-    font-size: 0.85rem;
-    color: #555;
-}
-
-.pitchdeck-slide-text pre {
-    background: #f0f0f0;
-    padding: 10px 12px;
-    border-radius: 3px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-size: 0.85rem;
-    color: #222;
-    margin: 0 0 12px;
-}
-
-/* Extra info textarea */
-.pitchdeck-extra-info label {
-    display: block;
-    margin-bottom: 4px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: #444;
-}
-
-.pitchdeck-extra-info textarea {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 0.875rem;
-    resize: vertical;
+.pd-select {
+    padding: 8px 12px;
+    border: 1px solid var(--pd-border);
+    border-radius: 6px;
+    font-size: .875rem;
     font-family: inherit;
+    background: var(--pd-surface);
+    color: var(--pd-text);
+    cursor: pointer;
 }
 
-.pitchdeck-extra-info textarea:focus {
+.pd-select:focus {
     outline: none;
-    border-color: #0073aa;
-    box-shadow: 0 0 0 1px #0073aa;
+    border-color: var(--pd-accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.12);
 }
 
-/* Save section */
-#pitchdeck-save-section {
-    margin-top: 8px;
-}
+/* ── Buttons ─────────────────────────────────────────────────────── */
 
-#pitchdeck-save-btn {
-    padding: 10px 28px;
-    background: #0073aa;
-    color: #fff;
-    border: none;
-    border-radius: 3px;
+.pd-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: .9rem;
+    font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
-    font-size: 1rem;
+    text-decoration: none;
+    transition: background .15s, border-color .15s, color .15s;
+    line-height: 1;
 }
 
-#pitchdeck-save-btn:hover {
-    background: #005a87;
-}
+.pd-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-#pitchdeck-generate-btn {
-    margin-left: 12px;
-    padding: 10px 28px;
-    background: #1e8e3e;
+.pd-btn--primary {
+    background: var(--pd-accent);
     color: #fff;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
+}
+.pd-btn--primary:hover:not(:disabled) { background: var(--pd-accent-h); }
+
+.pd-btn--success {
+    background: var(--pd-success);
+    color: #fff;
+}
+.pd-btn--success:hover:not(:disabled) { background: var(--pd-success-h); }
+
+.pd-btn--ghost {
+    background: transparent;
+    color: var(--pd-muted);
+    border-color: var(--pd-border);
+}
+.pd-btn--ghost:hover:not(:disabled) {
+    background: var(--pd-bg);
+    color: var(--pd-text);
+}
+
+.pd-btn--lg {
+    padding: 14px 36px;
     font-size: 1rem;
+    border-radius: 10px;
 }
 
-#pitchdeck-generate-btn:hover {
-    background: #167a34;
-}
-
-#pitchdeck-generate-btn:disabled {
-    background: #888;
-    cursor: not-allowed;
-}
-
-/* Script section */
-#pitchdeck-script-section {
+.pd-action-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
     margin-top: 24px;
-    border-top: 2px solid #ddd;
-    padding-top: 16px;
+    padding-top: 20px;
+    border-top: 1px solid var(--pd-border);
 }
 
-#pitchdeck-script-section h2 {
-    font-size: 1.1rem;
-    margin: 0 0 16px;
-    color: #333;
-}
+.pd-action-row [hidden] { display: none; }
+
+/* ── Script cards ────────────────────────────────────────────────── */
 
 .pitchdeck-script-card {
-    border: 1px solid #c3e6cb;
-    border-radius: 4px;
-    padding: 16px;
-    margin-bottom: 16px;
-    background: #f4faf6;
+    border: 1px solid var(--pd-border);
+    border-left: 3px solid var(--pd-accent);
+    border-radius: var(--pd-radius);
+    padding: 20px;
+    margin-bottom: 14px;
+    background: var(--pd-surface);
+    box-shadow: var(--pd-shadow);
 }
 
 .pitchdeck-script-card h3 {
-    margin: 0 0 8px;
-    font-size: 1rem;
-    color: #333;
+    margin: 0 0 10px;
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--pd-muted);
 }
 
 .pitchdeck-script-textarea {
     width: 100%;
     box-sizing: border-box;
-    padding: 8px 10px;
-    border: 1px solid #aed6b8;
-    border-radius: 3px;
-    font-size: 0.875rem;
+    padding: 10px 12px;
+    border: 1px solid var(--pd-border);
+    border-radius: 6px;
+    font-size: .9rem;
     resize: vertical;
     font-family: inherit;
-    line-height: 1.5;
+    line-height: 1.6;
+    color: var(--pd-text);
+    background: var(--pd-bg);
+    transition: border-color .15s, box-shadow .15s, background .15s;
 }
 
 .pitchdeck-script-textarea:focus {
     outline: none;
-    border-color: #1e8e3e;
-    box-shadow: 0 0 0 1px #1e8e3e;
+    border-color: var(--pd-accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+    background: var(--pd-surface);
+}
+
+.pd-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.pitchdeck-generate-slide-audio-btn {
+    padding: 6px 14px;
+    background: transparent;
+    color: var(--pd-accent);
+    border: 1px solid var(--pd-accent);
+    border-radius: 6px;
+    font-size: .8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    flex-shrink: 0;
+}
+
+.pitchdeck-generate-slide-audio-btn:hover {
+    background: var(--pd-accent);
+    color: #fff;
+}
+
+.pitchdeck-generate-slide-audio-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.pd-card-footer audio {
+    height: 34px;
+    flex: 1;
+    min-width: 160px;
+}
+
+/* ── Video panel ─────────────────────────────────────────────────── */
+
+.pd-video-wrap {
+    background: #000;
+    border-radius: var(--pd-radius);
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+#pitchdeck-video-player {
+    display: block;
+    width: 100%;
+    max-height: 460px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+    .pd-panel { padding: 24px 20px; }
+    .pd-process { grid-template-columns: repeat(2, 1fr); }
+    .pd-hero h2 { font-size: 1.3rem; }
+    .pd-step-label { display: none; }
 }

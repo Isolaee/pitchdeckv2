@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Pitchdeck
  * Description: Upload a PPTX, extract slide text, add notes per slide, generate voiceover scripts.
- * Version:     0.1.2
+ * Version:     0.2.0
  * Author:      Eero Isola
  * Text Domain: pitchdeck
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PITCHDECK_VERSION',    '0.1.2' );
+define( 'PITCHDECK_VERSION',    '0.2.0' );
 define( 'PITCHDECK_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PITCHDECK_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -74,29 +74,90 @@ function pitchdeck_shortcode_render( array $atts ): string {
     ob_start();
     ?>
     <div id="pitchdeck-app">
-        <form id="pitchdeck-upload-form" enctype="multipart/form-data">
-            <label for="pitchdeck-file">Upload your PPTX or PDF file:</label>
-            <input type="file" id="pitchdeck-file" name="pptx_file" accept=".pptx,.pdf" required />
-            <label for="pitchdeck-language">Script language:</label>
-            <select id="pitchdeck-language">
-                <option value="Finnish">Finnish</option>
-                <option value="English">English</option>
-                <option value="Swedish">Swedish</option>
-            </select>
-            <button type="submit">Generate Scripts</button>
-        </form>
-        <div id="pitchdeck-status"></div>
-        <div id="pitchdeck-script-section" style="display:none;">
-            <h2>Scripts</h2>
+
+        <!-- Step indicator -->
+        <ol class="pd-steps">
+            <li class="pd-step pd-step--active" data-step="1"><span class="pd-step-circle">1</span><span class="pd-step-label">Start</span></li>
+            <li class="pd-step" data-step="2"><span class="pd-step-circle">2</span><span class="pd-step-label">Upload</span></li>
+            <li class="pd-step" data-step="3"><span class="pd-step-circle">3</span><span class="pd-step-label">Scripts</span></li>
+            <li class="pd-step" data-step="4"><span class="pd-step-circle">4</span><span class="pd-step-label">Video</span></li>
+        </ol>
+
+        <!-- Status message (lives outside panels so position stays fixed) -->
+        <div id="pitchdeck-status" class="pitchdeck-status" hidden></div>
+
+        <!-- Panel 1: Landing -->
+        <section id="pd-panel-1" class="pd-panel">
+            <div class="pd-hero">
+                <h2>Turn your presentation into a voiceover video</h2>
+                <p>Upload a PPTX or PDF, let AI write a narration script for each slide, refine the text, and export a ready-to-share MP4.</p>
+            </div>
+            <div class="pd-process">
+                <div class="pd-process-item"><span class="pd-process-n">1</span><strong>Upload</strong><span>Your PPTX or PDF</span></div>
+                <div class="pd-process-item"><span class="pd-process-n">2</span><strong>Generate</strong><span>AI writes slide scripts</span></div>
+                <div class="pd-process-item"><span class="pd-process-n">3</span><strong>Refine</strong><span>Edit each narration</span></div>
+                <div class="pd-process-item"><span class="pd-process-n">4</span><strong>Export</strong><span>Download your MP4</span></div>
+            </div>
+            <div class="pd-hero-action">
+                <button id="pd-get-started-btn" class="pd-btn pd-btn--primary pd-btn--lg">Get Started &rarr;</button>
+            </div>
+        </section>
+
+        <!-- Panel 2: Upload -->
+        <section id="pd-panel-2" class="pd-panel" hidden>
+            <h2>Upload your presentation</h2>
+            <p class="pd-subtitle">Supported formats: <strong>.pptx</strong> and <strong>.pdf</strong></p>
+            <form id="pitchdeck-upload-form" enctype="multipart/form-data">
+                <label class="pd-dropzone" for="pitchdeck-file">
+                    <svg class="pd-dropzone-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span class="pd-dropzone-text">Choose a file or drag it here</span>
+                    <span class="pd-dropzone-hint">.pptx or .pdf</span>
+                    <span id="pd-file-name" class="pd-dropzone-filename"></span>
+                    <input type="file" id="pitchdeck-file" name="pptx_file" accept=".pptx,.pdf" required />
+                </label>
+                <div class="pd-form-row">
+                    <label for="pitchdeck-language" class="pd-label">Script language</label>
+                    <select id="pitchdeck-language" class="pd-select">
+                        <option value="Finnish">Finnish</option>
+                        <option value="English">English</option>
+                        <option value="Swedish">Swedish</option>
+                    </select>
+                </div>
+                <button type="submit" class="pd-btn pd-btn--primary">Generate Scripts</button>
+            </form>
+        </section>
+
+        <!-- Panel 3: Edit Scripts -->
+        <section id="pd-panel-3" class="pd-panel" hidden>
+            <h2>Review &amp; edit scripts</h2>
+            <p class="pd-subtitle">Each script is read aloud for its slide. The voiceover uses exactly what you see here.</p>
             <div id="pitchdeck-scripts-container"></div>
-            <button id="pitchdeck-audio-btn">Generate Voiceover Audio</button>
-            <button id="pitchdeck-video-btn" style="display:none;">Generate Video</button>
+            <div class="pd-action-row">
+                <button id="pitchdeck-audio-btn" class="pd-btn pd-btn--primary">Generate All Voiceovers</button>
+                <button id="pitchdeck-video-btn" class="pd-btn pd-btn--success" hidden>Generate Video</button>
+            </div>
+        </section>
+
+        <!-- Panel 4: Video -->
+        <section id="pd-panel-4" class="pd-panel" hidden>
+            <h2>Your video is ready</h2>
+            <div class="pd-video-wrap">
+                <video id="pitchdeck-video-player" controls></video>
+            </div>
+            <div class="pd-action-row">
+                <a id="pitchdeck-video-download" href="#" download class="pd-btn pd-btn--primary">Download MP4</a>
+                <button id="pd-start-over-btn" class="pd-btn pd-btn--ghost">Start over</button>
+            </div>
+        </section>
+
+        <!-- Loading overlay -->
+        <div id="pd-overlay" hidden>
+            <div class="pd-overlay-box">
+                <div class="pd-spinner"></div>
+                <p id="pd-overlay-msg"></p>
+            </div>
         </div>
-        <div id="pitchdeck-video-section" style="display:none;">
-            <h2>Final Video</h2>
-            <video id="pitchdeck-video-player" controls style="max-width:100%;"></video>
-            <p><a id="pitchdeck-video-download" href="#" download>Download MP4</a></p>
-        </div>
+
     </div>
     <?php
     return ob_get_clean();

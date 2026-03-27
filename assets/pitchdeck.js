@@ -1,36 +1,93 @@
-/* pitchdeck.js — upload PPTX, auto-generate scripts, produce voiceover and video */
+/* pitchdeck.js — upload PPTX/PDF, generate scripts, produce voiceover and video */
 (function () {
     'use strict';
 
-    // pitchdeck_config is injected by wp_localize_script in pitchdeck.php
     const { rest_url, nonce } = window.pitchdeck_config;
 
     let currentJobId = null;
 
     document.addEventListener('DOMContentLoaded', function () {
-        const form     = document.getElementById('pitchdeck-upload-form');
-        const audioBtn = document.getElementById('pitchdeck-audio-btn');
-        const videoBtn = document.getElementById('pitchdeck-video-btn');
-        if (form)     form.addEventListener('submit', handleUpload);
-        if (audioBtn) audioBtn.addEventListener('click', handleGenerateAudio);
-        if (videoBtn) videoBtn.addEventListener('click', handleGenerateVideo);
+        document.getElementById('pd-get-started-btn')
+            .addEventListener('click', function () { showStep(2); });
 
+        document.getElementById('pd-start-over-btn')
+            .addEventListener('click', handleStartOver);
+
+        document.getElementById('pitchdeck-upload-form')
+            .addEventListener('submit', handleUpload);
+
+        document.getElementById('pitchdeck-audio-btn')
+            .addEventListener('click', handleGenerateAudio);
+
+        document.getElementById('pitchdeck-video-btn')
+            .addEventListener('click', handleGenerateVideo);
+
+        // Per-slide VO button delegation
         document.addEventListener('click', function (e) {
             if (e.target.matches('.pitchdeck-generate-slide-audio-btn')) {
                 handleGenerateSlideAudio(parseInt(e.target.dataset.slide, 10));
             }
         });
+
+        wireDropzone();
     });
 
-    /**
-     * Handle form submission: upload → save slides → generate scripts → show for editing.
-     */
+    /* ── Step navigation ──────────────────────────────────────────── */
+
+    function showStep(n) {
+        document.querySelectorAll('.pd-step').forEach(function (li) {
+            const s = parseInt(li.dataset.step, 10);
+            li.classList.toggle('pd-step--active', s === n);
+            li.classList.toggle('pd-step--done',   s < n);
+        });
+
+        for (let i = 1; i <= 4; i++) {
+            const panel = document.getElementById('pd-panel-' + i);
+            if (panel) panel.hidden = (i !== n);
+        }
+
+        clearStatus();
+
+        const app = document.getElementById('pitchdeck-app');
+        if (app) window.scrollTo({ top: app.getBoundingClientRect().top + window.scrollY - 24, behavior: 'smooth' });
+    }
+
+    /* ── Loading overlay ──────────────────────────────────────────── */
+
+    function showOverlay(msg) {
+        document.getElementById('pd-overlay-msg').textContent = msg || '';
+        document.getElementById('pd-overlay').hidden = false;
+    }
+
+    function hideOverlay() {
+        document.getElementById('pd-overlay').hidden = true;
+    }
+
+    /* ── Status messages ──────────────────────────────────────────── */
+
+    function setStatus(msg, type) {
+        const el = document.getElementById('pitchdeck-status');
+        if (!el) return;
+        el.textContent = msg;
+        el.className   = 'pitchdeck-status pitchdeck-status--' + type;
+        el.hidden      = false;
+    }
+
+    function clearStatus() {
+        const el = document.getElementById('pitchdeck-status');
+        if (!el) return;
+        el.hidden      = true;
+        el.textContent = '';
+        el.className   = 'pitchdeck-status';
+    }
+
+    /* ── Upload flow ──────────────────────────────────────────────── */
+
     async function handleUpload(event) {
         event.preventDefault();
 
-        const fileInput     = document.getElementById('pitchdeck-file');
-        const langSelect    = document.getElementById('pitchdeck-language');
-        const scriptSection = document.getElementById('pitchdeck-script-section');
+        const fileInput  = document.getElementById('pitchdeck-file');
+        const langSelect = document.getElementById('pitchdeck-language');
 
         if (!fileInput.files.length) {
             setStatus('Please select a .pptx or .pdf file.', 'error');
@@ -38,118 +95,115 @@
         }
 
         const language = langSelect ? langSelect.value : 'Finnish';
-        const submitBtn = event.target.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        scriptSection.style.display = 'none';
 
-        // --- Step 1: upload and extract ---
-        setStatus('Uploading and extracting slides\u2026', 'info');
+        // 1. Upload and extract
+        showOverlay('Uploading and extracting slides\u2026');
 
         let slides;
         try {
             const formData = new FormData();
             formData.append('pptx_file', fileInput.files[0]);
 
-            const uploadResp = await fetch(`${rest_url}/upload`, {
-                method: 'POST',
+            const uploadResp = await fetch(rest_url + '/upload', {
+                method:  'POST',
                 headers: { 'X-WP-Nonce': nonce },
-                body: formData,
+                body:    formData,
             });
             const uploadData = await uploadResp.json();
 
             if (!uploadResp.ok) {
-                setStatus(`Upload failed: ${uploadData.message || 'Unknown error.'}`, 'error');
+                hideOverlay();
+                setStatus('Upload failed: ' + (uploadData.message || 'Unknown error.'), 'error');
                 return;
             }
 
             currentJobId = uploadData.job_id;
             slides       = uploadData.slides;
         } catch (err) {
+            hideOverlay();
             setStatus('Upload failed: ' + err.message, 'error');
-            console.error('Pitchdeck upload error:', err);
             return;
-        } finally {
-            submitBtn.disabled = false;
         }
 
-        // --- Step 2: save slides to DB ---
-        setStatus(`Extracted ${slides.length} slide(s). Saving\u2026`, 'info');
+        // 2. Save slides
+        showOverlay('Saving ' + slides.length + ' slide(s)\u2026');
 
         try {
             const slidesToSave = slides.map(function (s) {
                 return { slide_number: s.slide_number, slide_text: s.slide_text, extra_info: '' };
             });
 
-            const saveResp = await fetch(`${rest_url}/save-slides`, {
-                method: 'POST',
+            const saveResp = await fetch(rest_url + '/save-slides', {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                body: JSON.stringify({ job_id: currentJobId, slides: slidesToSave }),
+                body:    JSON.stringify({ job_id: currentJobId, slides: slidesToSave }),
             });
 
             if (!saveResp.ok) {
                 const saveData = await saveResp.json();
-                setStatus(`Save failed: ${saveData.message || 'Unknown error.'}`, 'error');
+                hideOverlay();
+                setStatus('Save failed: ' + (saveData.message || 'Unknown error.'), 'error');
                 return;
             }
         } catch (err) {
+            hideOverlay();
             setStatus('Network error saving slides. Please try again.', 'error');
-            console.error('Pitchdeck save error:', err);
             return;
         }
 
-        // --- Step 3: generate scripts ---
-        setStatus('Generating scripts via OpenAI\u2026 this may take a few seconds.', 'info');
+        // 3. Generate scripts
+        showOverlay('Generating scripts via AI\u2026 this may take a moment.');
 
         try {
-            const scriptResp = await fetch(`${rest_url}/generate-script`, {
-                method: 'POST',
+            const scriptResp = await fetch(rest_url + '/generate-script', {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                body: JSON.stringify({ job_id: currentJobId, language }),
+                body:    JSON.stringify({ job_id: currentJobId, language: language }),
             });
             const scriptData = await scriptResp.json();
 
             if (!scriptResp.ok) {
-                setStatus(`Script generation failed: ${scriptData.message || 'Unknown error.'}`, 'error');
+                hideOverlay();
+                setStatus('Script generation failed: ' + (scriptData.message || 'Unknown error.'), 'error');
                 return;
             }
 
             renderScripts(scriptData.scripts);
-            scriptSection.style.display = 'block';
-            setStatus(`Scripts ready for ${scriptData.scripts.length} slide(s). Review and edit, then generate audio.`, 'success');
-
+            hideOverlay();
+            showStep(3);
+            setStatus('Scripts ready for ' + scriptData.scripts.length + ' slide(s). Review and edit, then generate voiceovers.', 'success');
         } catch (err) {
+            hideOverlay();
             setStatus('Network error during script generation. Please try again.', 'error');
-            console.error('Pitchdeck generate error:', err);
         }
     }
 
-    /**
-     * Render generated scripts as editable textareas, one per slide.
-     */
+    /* ── Render script cards ──────────────────────────────────────── */
+
     function renderScripts(scripts) {
         const container = document.getElementById('pitchdeck-scripts-container');
         container.innerHTML = '';
 
         scripts.forEach(function (item) {
             const card = document.createElement('div');
-            card.className = 'pitchdeck-script-card';
+            card.className      = 'pitchdeck-script-card';
+            card.dataset.slide  = item.slide_number;
 
-            card.innerHTML = `
-                <h3>Slide ${item.slide_number}</h3>
-                <textarea
-                    id="script-text-${item.slide_number}"
-                    class="pitchdeck-script-textarea"
-                    rows="4"
-                >${escapeHtml(item.script_text || '')}</textarea>
-                <button class="pitchdeck-generate-slide-audio-btn" data-slide="${item.slide_number}">Generate VO for this slide</button>`;
+            card.innerHTML =
+                '<h3>Slide ' + item.slide_number + '</h3>' +
+                '<textarea' +
+                '  id="script-text-' + item.slide_number + '"' +
+                '  class="pitchdeck-script-textarea"' +
+                '  rows="4"' +
+                '>' + escapeHtml(item.script_text || '') + '</textarea>' +
+                '<div class="pd-card-footer">' +
+                '  <button class="pitchdeck-generate-slide-audio-btn" data-slide="' + item.slide_number + '">Generate VO for this slide</button>' +
+                '</div>';
 
             container.appendChild(card);
         });
     }
 
-    /**
-     * Collect current textarea values as [{slide_number, script_text}].
-     */
     function collectScripts() {
         return Array.from(document.querySelectorAll('.pitchdeck-script-textarea')).map(function (ta) {
             return {
@@ -159,170 +213,182 @@
         });
     }
 
-    /**
-     * Attach an audio player to a slide card.
-     */
     function attachAudioPlayer(item) {
-        const card = document.getElementById(`script-text-${item.slide_number}`);
+        const card = document.querySelector('.pitchdeck-script-card[data-slide="' + item.slide_number + '"]');
         if (!card) return;
-        const existing = document.getElementById(`audio-player-${item.slide_number}`);
+
+        const existing = card.querySelector('#audio-player-' + item.slide_number);
         if (existing) existing.remove();
-        const player = document.createElement('audio');
-        player.id       = `audio-player-${item.slide_number}`;
+
+        const player    = document.createElement('audio');
+        player.id       = 'audio-player-' + item.slide_number;
         player.controls = true;
         player.src      = item.audio_url + '?t=' + Date.now();
-        card.parentNode.appendChild(player);
+
+        const footer = card.querySelector('.pd-card-footer');
+        (footer || card).appendChild(player);
     }
 
-    /**
-     * Generate VO for a single slide using the current textarea value.
-     */
+    /* ── Per-slide VO ─────────────────────────────────────────────── */
+
     async function handleGenerateSlideAudio(slideNumber) {
         if (!currentJobId) {
-            setStatus('No job loaded. Please upload and save slides first.', 'error');
+            setStatus('No job loaded. Please upload first.', 'error');
             return;
         }
 
-        const btn = document.querySelector(`.pitchdeck-generate-slide-audio-btn[data-slide="${slideNumber}"]`);
-        if (btn) btn.disabled = true;
-
-        setStatus(`Generating voiceover for slide ${slideNumber}\u2026`, 'info');
-
+        showOverlay('Generating voiceover for slide ' + slideNumber + '\u2026');
         const scripts = collectScripts();
 
         try {
-            const response = await fetch(`${rest_url}/generate-audio`, {
-                method: 'POST',
+            const response = await fetch(rest_url + '/generate-audio', {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                body: JSON.stringify({ job_id: currentJobId, slide_number: slideNumber, scripts }),
+                body:    JSON.stringify({ job_id: currentJobId, slide_number: slideNumber, scripts: scripts }),
             });
-
             const data = await response.json();
+            hideOverlay();
 
             if (!response.ok) {
-                setStatus(`Audio generation failed: ${data.message || 'Unknown error.'}`, 'error');
+                setStatus('Audio generation failed: ' + (data.message || 'Unknown error.'), 'error');
                 return;
             }
 
             data.audio.forEach(attachAudioPlayer);
-            setStatus(`Voiceover generated for slide ${slideNumber}.`, 'success');
-
         } catch (err) {
+            hideOverlay();
             setStatus('Network error during audio generation. Please try again.', 'error');
-            console.error('Pitchdeck audio error:', err);
-        } finally {
-            if (btn) btn.disabled = false;
         }
     }
 
-    /**
-     * Call POST /generate-audio, then attach <audio> players to each script card.
-     */
+    /* ── Generate all voiceovers ──────────────────────────────────── */
+
     async function handleGenerateAudio() {
         if (!currentJobId) {
-            setStatus('No job loaded. Please upload and save slides first.', 'error');
+            setStatus('No job loaded. Please upload first.', 'error');
             return;
         }
 
-        const audioBtn = document.getElementById('pitchdeck-audio-btn');
-        audioBtn.disabled = true;
-
-        setStatus('Generating voiceover audio via OpenAI\u2026 this may take a while.', 'info');
-
-        // Pass current textarea values directly so the backend uses what the user sees,
-        // not a potentially stale version from the database.
+        showOverlay('Generating voiceover audio\u2026 this may take a while.');
         const scripts = collectScripts();
 
         try {
-            const response = await fetch(`${rest_url}/generate-audio`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce':   nonce,
-                },
-                body: JSON.stringify({ job_id: currentJobId, scripts }),
+            const response = await fetch(rest_url + '/generate-audio', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+                body:    JSON.stringify({ job_id: currentJobId, scripts: scripts }),
             });
-
             const data = await response.json();
+            hideOverlay();
 
             if (!response.ok) {
-                setStatus(`Audio generation failed: ${data.message || 'Unknown error.'}`, 'error');
+                setStatus('Audio generation failed: ' + (data.message || 'Unknown error.'), 'error');
                 return;
             }
 
             data.audio.forEach(attachAudioPlayer);
 
-            setStatus(`Voiceover audio generated for ${data.audio.length} slide(s). You can now generate the video.`, 'success');
-
             const videoBtn = document.getElementById('pitchdeck-video-btn');
-            if (videoBtn) videoBtn.style.display = 'inline-block';
+            if (videoBtn) videoBtn.hidden = false;
 
+            setStatus('Voiceovers generated for ' + data.audio.length + ' slide(s). Ready to generate video.', 'success');
         } catch (err) {
+            hideOverlay();
             setStatus('Network error during audio generation. Please try again.', 'error');
-            console.error('Pitchdeck audio error:', err);
-        } finally {
-            audioBtn.disabled = false;
         }
     }
 
-    /**
-     * Call POST /generate-video, then show the final MP4 in a video player.
-     */
+    /* ── Generate video ───────────────────────────────────────────── */
+
     async function handleGenerateVideo() {
         if (!currentJobId) {
-            setStatus('No job loaded. Please upload and save slides first.', 'error');
+            setStatus('No job loaded. Please upload first.', 'error');
             return;
         }
 
-        const videoBtn     = document.getElementById('pitchdeck-video-btn');
-        const videoSection = document.getElementById('pitchdeck-video-section');
-        const videoPlayer  = document.getElementById('pitchdeck-video-player');
-        const videoDownload = document.getElementById('pitchdeck-video-download');
-
-        videoBtn.disabled = true;
-        setStatus('Rendering slide images and encoding video\u2026 this may take a minute.', 'info');
+        showOverlay('Rendering slide images and encoding video\u2026 this may take a minute.');
 
         try {
-            const response = await fetch(`${rest_url}/generate-video`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce':   nonce,
-                },
-                body: JSON.stringify({ job_id: currentJobId }),
+            const response = await fetch(rest_url + '/generate-video', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+                body:    JSON.stringify({ job_id: currentJobId }),
             });
-
             const data = await response.json();
+            hideOverlay();
 
             if (!response.ok) {
-                setStatus(`Video generation failed: ${data.message || 'Unknown error.'}`, 'error');
+                setStatus('Video generation failed: ' + (data.message || 'Unknown error.'), 'error');
                 return;
             }
 
-            videoPlayer.src      = data.video_url;
-            videoDownload.href   = data.video_url;
-            videoSection.style.display = 'block';
-            videoPlayer.load();
+            const player   = document.getElementById('pitchdeck-video-player');
+            const download = document.getElementById('pitchdeck-video-download');
+            if (player)   { player.src = data.video_url; player.load(); }
+            if (download) download.href = data.video_url;
 
-            setStatus('Video ready!', 'success');
-
+            showStep(4);
         } catch (err) {
+            hideOverlay();
             setStatus('Network error during video generation. Please try again.', 'error');
-            console.error('Pitchdeck video error:', err);
-        } finally {
-            videoBtn.disabled = false;
         }
     }
 
-    function setStatus(message, type) {
-        const el = document.getElementById('pitchdeck-status');
-        if (el) {
-            el.textContent = message;
-            el.className   = `pitchdeck-status pitchdeck-status--${type}`;
-        }
+    /* ── Start over ───────────────────────────────────────────────── */
+
+    function handleStartOver() {
+        currentJobId = null;
+
+        const form = document.getElementById('pitchdeck-upload-form');
+        if (form) form.reset();
+
+        const fileNameEl = document.getElementById('pd-file-name');
+        if (fileNameEl) fileNameEl.textContent = '';
+
+        const container = document.getElementById('pitchdeck-scripts-container');
+        if (container) container.innerHTML = '';
+
+        const videoBtn = document.getElementById('pitchdeck-video-btn');
+        if (videoBtn) videoBtn.hidden = true;
+
+        const player = document.getElementById('pitchdeck-video-player');
+        if (player) player.src = '';
+
+        showStep(1);
     }
 
-    /** Minimal HTML escaping to prevent XSS in rendered slide text. */
+    /* ── Dropzone wiring ──────────────────────────────────────────── */
+
+    function wireDropzone() {
+        const zone     = document.querySelector('.pd-dropzone');
+        const input    = document.getElementById('pitchdeck-file');
+        const fileNameEl = document.getElementById('pd-file-name');
+
+        if (!zone || !input) return;
+
+        input.addEventListener('change', function () {
+            if (fileNameEl) fileNameEl.textContent = this.files[0] ? this.files[0].name : '';
+        });
+
+        zone.addEventListener('dragover',  function (e) { e.preventDefault(); zone.classList.add('pd-dropzone--over'); });
+        zone.addEventListener('dragenter', function (e) { e.preventDefault(); zone.classList.add('pd-dropzone--over'); });
+        zone.addEventListener('dragleave', function ()  { zone.classList.remove('pd-dropzone--over'); });
+
+        zone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            zone.classList.remove('pd-dropzone--over');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                if (fileNameEl) fileNameEl.textContent = file.name;
+            }
+        });
+    }
+
+    /* ── Helpers ──────────────────────────────────────────────────── */
+
     function escapeHtml(str) {
         return String(str)
             .replace(/&/g, '&amp;')
@@ -330,4 +396,5 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
     }
+
 })();
