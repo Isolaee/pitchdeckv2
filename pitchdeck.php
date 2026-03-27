@@ -77,9 +77,9 @@ function pitchdeck_shortcode_render( array $atts ): string {
 
         <!-- Step indicator -->
         <nav class="pd-steps">
-            <div class="pd-step pd-step--active" data-step="1"><span class="pd-step-circle">1</span><span class="pd-step-label">Start</span></div>
-            <div class="pd-step" data-step="2"><span class="pd-step-circle">2</span><span class="pd-step-label">Upload</span></div>
-            <div class="pd-step" data-step="3"><span class="pd-step-circle">3</span><span class="pd-step-label">Scripts</span></div>
+            <div class="pd-step pd-step--active" data-step="1"><span class="pd-step-circle">1</span><span class="pd-step-label">Aloitus</span></div>
+            <div class="pd-step" data-step="2"><span class="pd-step-circle">2</span><span class="pd-step-label">Lataus</span></div>
+            <div class="pd-step" data-step="3"><span class="pd-step-circle">3</span><span class="pd-step-label">Skriptit</span></div>
             <div class="pd-step" data-step="4"><span class="pd-step-circle">4</span><span class="pd-step-label">Video</span></div>
         </nav>
 
@@ -89,64 +89,64 @@ function pitchdeck_shortcode_render( array $atts ): string {
         <!-- Panel 1: Landing -->
         <section id="pd-panel-1" class="pd-panel">
             <div class="pd-hero">
-                <h2>Turn your presentation into a voiceover video</h2>
-                <p>Upload a PPTX or PDF, let AI write a narration script for each slide, refine the text, and export a ready-to-share MP4.</p>
+                <h2>Muuta esityksesi ääniselostevideoksi</h2>
+                <p>Lataa PPTX tai PDF, anna tekoälyn kirjoittaa selostusteksti jokaiselle dialle, muokkaa tekstiä ja vie valmis MP4.</p>
             </div>
             <div class="pd-process">
-                <div class="pd-process-item"><span class="pd-process-n">1</span><strong>Upload</strong><span>Your PPTX or PDF</span></div>
-                <div class="pd-process-item"><span class="pd-process-n">2</span><strong>Generate</strong><span>AI writes slide scripts</span></div>
-                <div class="pd-process-item"><span class="pd-process-n">3</span><strong>Refine</strong><span>Edit each narration</span></div>
-                <div class="pd-process-item"><span class="pd-process-n">4</span><strong>Export</strong><span>Download your MP4</span></div>
+                <div class="pd-process-item"><span class="pd-process-n">1</span><strong>Lataa</strong><span>PPTX tai PDF</span></div>
+                <div class="pd-process-item"><span class="pd-process-n">2</span><strong>Luo</strong><span>Tekoäly kirjoittaa skriptit</span></div>
+                <div class="pd-process-item"><span class="pd-process-n">3</span><strong>Muokkaa</strong><span>Tarkista selostukset</span></div>
+                <div class="pd-process-item"><span class="pd-process-n">4</span><strong>Vie</strong><span>Lataa MP4</span></div>
             </div>
             <div class="pd-hero-action">
-                <button id="pd-get-started-btn" class="pd-btn pd-btn--primary pd-btn--lg">Get Started &rarr;</button>
+                <button id="pd-get-started-btn" class="pd-btn pd-btn--primary pd-btn--lg">Aloita &rarr;</button>
             </div>
         </section>
 
         <!-- Panel 2: Upload -->
         <section id="pd-panel-2" class="pd-panel" hidden>
-            <h2>Upload your presentation</h2>
-            <p class="pd-subtitle">Supported formats: <strong>.pptx</strong> and <strong>.pdf</strong></p>
+            <h2>Lataa esityksesi</h2>
+            <p class="pd-subtitle">Tuetut formaatit: <strong>.pptx</strong> ja <strong>.pdf</strong></p>
             <form id="pitchdeck-upload-form" enctype="multipart/form-data">
                 <label class="pd-dropzone" for="pitchdeck-file">
                     <svg class="pd-dropzone-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <span class="pd-dropzone-text">Choose a file or drag it here</span>
-                    <span class="pd-dropzone-hint">.pptx or .pdf</span>
+                    <span class="pd-dropzone-text">Valitse tiedosto tai vedä se tähän</span>
+                    <span class="pd-dropzone-hint">.pptx tai .pdf</span>
                     <span id="pd-file-name" class="pd-dropzone-filename"></span>
-                    <input type="file" id="pitchdeck-file" name="pptx_file" accept=".pptx,.pdf" required />
+                    <input type="file" id="pitchdeck-file" name="pptx_file" accept=".pptx,.pdf" />
                 </label>
                 <div class="pd-form-row">
-                    <label for="pitchdeck-language" class="pd-label">Script language</label>
+                    <label for="pitchdeck-language" class="pd-label">Skriptin kieli</label>
                     <select id="pitchdeck-language" class="pd-select">
                         <option value="Finnish">Finnish</option>
                         <option value="English">English</option>
                         <option value="Swedish">Swedish</option>
                     </select>
                 </div>
-                <button type="submit" class="pd-btn pd-btn--primary">Generate Scripts</button>
+                <button type="submit" class="pd-btn pd-btn--primary">Luo skriptit</button>
             </form>
         </section>
 
         <!-- Panel 3: Edit Scripts -->
         <section id="pd-panel-3" class="pd-panel" hidden>
-            <h2>Review &amp; edit scripts</h2>
-            <p class="pd-subtitle">Each script is read aloud for its slide. The voiceover uses exactly what you see here.</p>
+            <h2>Tarkista ja muokkaa skriptit</h2>
+            <p class="pd-subtitle">Jokainen skripti luetaan ääneen sen dialle. Äänitys käyttää täsmälleen sitä, mitä näet tässä.</p>
             <div id="pitchdeck-scripts-container"></div>
             <div class="pd-action-row">
-                <button id="pitchdeck-audio-btn" class="pd-btn pd-btn--primary">Generate All Voiceovers</button>
-                <button id="pitchdeck-video-btn" class="pd-btn pd-btn--success" hidden>Generate Video</button>
+                <button id="pitchdeck-audio-btn" class="pd-btn pd-btn--primary">Luo kaikki äänitykset</button>
+                <button id="pitchdeck-video-btn" class="pd-btn pd-btn--success" hidden>Luo video</button>
             </div>
         </section>
 
         <!-- Panel 4: Video -->
         <section id="pd-panel-4" class="pd-panel" hidden>
-            <h2>Your video is ready</h2>
+            <h2>Videosi on valmis</h2>
             <div class="pd-video-wrap">
                 <video id="pitchdeck-video-player" controls></video>
             </div>
             <div class="pd-action-row">
-                <a id="pitchdeck-video-download" href="#" download class="pd-btn pd-btn--primary">Download MP4</a>
-                <button id="pd-start-over-btn" class="pd-btn pd-btn--ghost">Start over</button>
+                <a id="pitchdeck-video-download" href="#" download class="pd-btn pd-btn--primary">Lataa MP4</a>
+                <button id="pd-start-over-btn" class="pd-btn pd-btn--ghost">Aloita alusta</button>
             </div>
         </section>
 

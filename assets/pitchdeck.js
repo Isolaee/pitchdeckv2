@@ -90,14 +90,14 @@
         const langSelect = document.getElementById('pitchdeck-language');
 
         if (!fileInput.files.length) {
-            setStatus('Please select a .pptx or .pdf file.', 'error');
+            setStatus('Lataa esitystiedosto (.pptx tai .pdf) ennen jatkamista.', 'error');
             return;
         }
 
         const language = langSelect ? langSelect.value : 'Finnish';
 
         // 1. Upload and extract
-        showOverlay('Uploading and extracting slides\u2026');
+        showOverlay('Ladataan ja puretaan diat\u2026');
 
         let slides;
         try {
@@ -113,7 +113,7 @@
 
             if (!uploadResp.ok) {
                 hideOverlay();
-                setStatus('Upload failed: ' + (uploadData.message || 'Unknown error.'), 'error');
+                setStatus('Lataus epäonnistui: ' + (uploadData.message || 'Tuntematon virhe.'), 'error');
                 return;
             }
 
@@ -121,12 +121,12 @@
             slides       = uploadData.slides;
         } catch (err) {
             hideOverlay();
-            setStatus('Upload failed: ' + err.message, 'error');
+            setStatus('Lataus epäonnistui: ' + err.message, 'error');
             return;
         }
 
         // 2. Save slides
-        showOverlay('Saving ' + slides.length + ' slide(s)\u2026');
+        showOverlay('Tallennetaan ' + slides.length + ' dia\u2026');
 
         try {
             const slidesToSave = slides.map(function (s) {
@@ -142,17 +142,17 @@
             if (!saveResp.ok) {
                 const saveData = await saveResp.json();
                 hideOverlay();
-                setStatus('Save failed: ' + (saveData.message || 'Unknown error.'), 'error');
+                setStatus('Tallennus epäonnistui: ' + (saveData.message || 'Tuntematon virhe.'), 'error');
                 return;
             }
         } catch (err) {
             hideOverlay();
-            setStatus('Network error saving slides. Please try again.', 'error');
+            setStatus('Verkkovirhe diojen tallennuksessa. Yritä uudelleen.', 'error');
             return;
         }
 
         // 3. Generate scripts
-        showOverlay('Generating scripts via AI\u2026 this may take a moment.');
+        showOverlay('Luodaan skriptejä tekoälyn avulla\u2026 tämä voi kestää hetken.');
 
         try {
             const scriptResp = await fetch(rest_url + '/generate-script', {
@@ -164,14 +164,14 @@
 
             if (!scriptResp.ok) {
                 hideOverlay();
-                setStatus('Script generation failed: ' + (scriptData.message || 'Unknown error.'), 'error');
+                setStatus('Skriptien luonti epäonnistui: ' + (scriptData.message || 'Tuntematon virhe.'), 'error');
                 return;
             }
 
             renderScripts(scriptData.scripts);
             hideOverlay();
             showStep(3);
-            setStatus('Scripts ready for ' + scriptData.scripts.length + ' slide(s). Review and edit, then generate voiceovers.', 'success');
+            setStatus('Skriptit valmiina ' + scriptData.scripts.length + ' dialle. Tarkista ja muokkaa, sitten luo äänitykset.', 'success');
         } catch (err) {
             hideOverlay();
             setStatus('Network error during script generation. Please try again.', 'error');
@@ -190,14 +190,14 @@
             card.dataset.slide  = item.slide_number;
 
             card.innerHTML =
-                '<h3>Slide ' + item.slide_number + '</h3>' +
+                '<h3>Dia ' + item.slide_number + '</h3>' +
                 '<textarea' +
                 '  id="script-text-' + item.slide_number + '"' +
                 '  class="pitchdeck-script-textarea"' +
                 '  rows="4"' +
                 '>' + escapeHtml(item.script_text || '') + '</textarea>' +
                 '<div class="pd-card-footer">' +
-                '  <button class="pitchdeck-generate-slide-audio-btn" data-slide="' + item.slide_number + '">Generate VO for this slide</button>' +
+                '  <button class="pitchdeck-generate-slide-audio-btn" data-slide="' + item.slide_number + '">Luo äänitys tälle dialle</button>' +
                 '</div>';
 
             container.appendChild(card);
@@ -233,11 +233,11 @@
 
     async function handleGenerateSlideAudio(slideNumber) {
         if (!currentJobId) {
-            setStatus('No job loaded. Please upload first.', 'error');
+            setStatus('Ei ladattua työtä. Lataa ensin esitys.', 'error');
             return;
         }
 
-        showOverlay('Generating voiceover for slide ' + slideNumber + '\u2026');
+        showOverlay('Luodaan äänitys dialle ' + slideNumber + '\u2026');
         const scripts = collectScripts();
 
         try {
@@ -250,14 +250,14 @@
             hideOverlay();
 
             if (!response.ok) {
-                setStatus('Audio generation failed: ' + (data.message || 'Unknown error.'), 'error');
+                setStatus('Äänityksen luonti epäonnistui: ' + (data.message || 'Tuntematon virhe.'), 'error');
                 return;
             }
 
             data.audio.forEach(attachAudioPlayer);
         } catch (err) {
             hideOverlay();
-            setStatus('Network error during audio generation. Please try again.', 'error');
+            setStatus('Verkkovirhe äänityksen luonnin aikana. Yritä uudelleen.', 'error');
         }
     }
 
@@ -265,11 +265,11 @@
 
     async function handleGenerateAudio() {
         if (!currentJobId) {
-            setStatus('No job loaded. Please upload first.', 'error');
+            setStatus('Ei ladattua työtä. Lataa ensin esitys.', 'error');
             return;
         }
 
-        showOverlay('Generating voiceover audio\u2026 this may take a while.');
+        showOverlay('Luodaan äänityksiä\u2026 tämä voi kestää hetken.');
         const scripts = collectScripts();
 
         try {
@@ -282,7 +282,7 @@
             hideOverlay();
 
             if (!response.ok) {
-                setStatus('Audio generation failed: ' + (data.message || 'Unknown error.'), 'error');
+                setStatus('Äänityksen luonti epäonnistui: ' + (data.message || 'Tuntematon virhe.'), 'error');
                 return;
             }
 
@@ -291,10 +291,10 @@
             const videoBtn = document.getElementById('pitchdeck-video-btn');
             if (videoBtn) videoBtn.hidden = false;
 
-            setStatus('Voiceovers generated for ' + data.audio.length + ' slide(s). Ready to generate video.', 'success');
+            setStatus('Äänitykset luotu ' + data.audio.length + ' dialle. Voit nyt luoda videon.', 'success');
         } catch (err) {
             hideOverlay();
-            setStatus('Network error during audio generation. Please try again.', 'error');
+            setStatus('Verkkovirhe äänityksen luonnin aikana. Yritä uudelleen.', 'error');
         }
     }
 
@@ -302,11 +302,11 @@
 
     async function handleGenerateVideo() {
         if (!currentJobId) {
-            setStatus('No job loaded. Please upload first.', 'error');
+            setStatus('Ei ladattua työtä. Lataa ensin esitys.', 'error');
             return;
         }
 
-        showOverlay('Rendering slide images and encoding video\u2026 this may take a minute.');
+        showOverlay('Renderöidään diojen kuvia ja enkoodataan video\u2026 tämä voi kestää minuutin.');
 
         try {
             const response = await fetch(rest_url + '/generate-video', {
@@ -318,7 +318,7 @@
             hideOverlay();
 
             if (!response.ok) {
-                setStatus('Video generation failed: ' + (data.message || 'Unknown error.'), 'error');
+                setStatus('Videon luonti epäonnistui: ' + (data.message || 'Tuntematon virhe.'), 'error');
                 return;
             }
 
@@ -330,7 +330,7 @@
             showStep(4);
         } catch (err) {
             hideOverlay();
-            setStatus('Network error during video generation. Please try again.', 'error');
+            setStatus('Verkkovirhe videon luonnin aikana. Yritä uudelleen.', 'error');
         }
     }
 
