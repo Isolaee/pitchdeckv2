@@ -47,23 +47,6 @@ class Pitchdeck_REST_API {
             ],
         ] );
 
-        register_rest_route( self::NAMESPACE, '/save-scripts', [
-            'methods'             => WP_REST_Server::CREATABLE,
-            'callback'            => [ __CLASS__, 'handle_save_scripts' ],
-            'permission_callback' => [ __CLASS__, 'check_permissions' ],
-            'args'                => [
-                'job_id' => [
-                    'required'          => true,
-                    'type'              => 'string',
-                    'sanitize_callback' => 'sanitize_text_field',
-                ],
-                'scripts' => [
-                    'required' => true,
-                    'type'     => 'array',
-                ],
-            ],
-        ] );
-
         register_rest_route( self::NAMESPACE, '/generate-audio', [
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => [ __CLASS__, 'handle_generate_audio' ],
@@ -225,8 +208,6 @@ class Pitchdeck_REST_API {
         } catch ( RuntimeException $e ) {
             return new WP_Error( 'openai_error', $e->getMessage(), [ 'status' => 502 ] );
         }
-
-        Pitchdeck_DB::save_scripts( $job_id, $scripts );
 
         // Format for the frontend: array of {slide_number, script_text}.
         $output = [];
@@ -400,42 +381,6 @@ class Pitchdeck_REST_API {
     }
 
     /**
-     * POST /wp-json/pitchdeck/v1/save-scripts
-     *
-     * Accepts: application/json { job_id: string, scripts: [{slide_number, script_text}, ...] }
-     * Returns: { success: bool, saved_count: int }
-     */
-    public static function handle_save_scripts( WP_REST_Request $request ) {
-        $job_id  = $request->get_param( 'job_id' );
-        $scripts = $request->get_param( 'scripts' );
-
-        if ( empty( $job_id ) || ! is_array( $scripts ) || empty( $scripts ) ) {
-            return new WP_Error( 'invalid_data', 'job_id and a non-empty scripts array are required.', [ 'status' => 400 ] );
-        }
-
-        // Convert [{slide_number, script_text}] to slide_number => script_text map.
-        $scripts_map = [];
-        foreach ( $scripts as $item ) {
-            $num  = (int) ( $item['slide_number'] ?? 0 );
-            $text = $item['script_text'] ?? '';
-            if ( $num > 0 ) {
-                $scripts_map[ $num ] = $text;
-            }
-        }
-
-        $success = Pitchdeck_DB::save_scripts( $job_id, $scripts_map );
-
-        if ( ! $success ) {
-            return new WP_Error( 'db_error', 'One or more scripts could not be saved.', [ 'status' => 500 ] );
-        }
-
-        return rest_ensure_response( [
-            'success'     => true,
-            'saved_count' => count( $scripts_map ),
-        ] );
-    }
-
-    /**
      * POST /wp-json/pitchdeck/v1/generate-audio
      *
      * Accepts: application/json {
@@ -483,20 +428,15 @@ class Pitchdeck_REST_API {
                 continue;
             }
 
-            // Prefer the script text from the request (what the user currently sees);
-            // fall back to what is stored in the DB.
-            if ( array_key_exists( $slide_number, $script_overrides ) ) {
-                $script_text = trim( $script_overrides[ $slide_number ] );
-            } else {
-                $script_text = trim( $slide->script_text );
+            // Use only the on-page script text passed from the frontend.
+            if ( ! array_key_exists( $slide_number, $script_overrides ) ) {
+                continue;
             }
+            $script_text = trim( $script_overrides[ $slide_number ] );
 
             if ( empty( $script_text ) ) {
                 continue;
             }
-
-            // Persist the (possibly edited) script text so the DB stays in sync.
-            Pitchdeck_DB::save_scripts( $job_id, [ $slide_number => $script_text ] );
 
             try {
                 $audio_binary = Pitchdeck_OpenAI::generate_audio( $script_text );
