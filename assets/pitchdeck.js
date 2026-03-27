@@ -170,7 +170,7 @@
         const player = document.createElement('audio');
         player.id       = `audio-player-${item.slide_number}`;
         player.controls = true;
-        player.src      = item.audio_url;
+        player.src      = item.audio_url + '?t=' + Date.now();
         card.parentNode.appendChild(player);
     }
 
