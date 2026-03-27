@@ -369,15 +369,20 @@
 .pd-voice-option {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     border: 2px solid var(--pd-border);
     border-radius: 8px;
     padding: 10px 12px;
-    cursor: pointer;
+    background: var(--pd-bg);
     transition: border-color .15s, background .15s;
+    cursor: pointer;
 }
 
-.pd-voice-option:has(input:checked) {
+.pd-voice-option:hover {
+    border-color: #b3bde8;
+}
+
+.pd-voice-option.is-selected {
     border-color: var(--pd-accent);
     background: #eef2ff;
 }
@@ -391,34 +396,38 @@
     flex-direction: column;
     flex: 1;
     min-width: 0;
+    cursor: pointer;
 }
 
 .pd-voice-name {
     font-size: .875rem;
     font-weight: 700;
     color: var(--pd-text);
+    line-height: 1.2;
 }
 
 .pd-voice-desc {
     font-size: .75rem;
     color: var(--pd-muted);
+    margin-top: 2px;
 }
 
 .pd-voice-preview-btn {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     border: 1px solid var(--pd-border);
     background: var(--pd-surface);
     color: var(--pd-accent);
-    font-size: .7rem;
+    font-size: .65rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background .15s, color .15s;
+    transition: background .15s, color .15s, border-color .15s;
     padding: 0;
+    line-height: 1;
 }
 
 .pd-voice-preview-btn:hover {

@@ -124,7 +124,7 @@ function pitchdeck_shortcode_render( array $atts ): string {
                     </select>
                 </div>
                 <div class="pd-form-group">
-                    <label class="pd-label">Ääni</label>
+                    <span class="pd-label">Ääni</span>
                     <div class="pd-voice-picker">
                         <?php
                         $voices = [
@@ -137,15 +137,16 @@ function pitchdeck_shortcode_render( array $atts ): string {
                         ];
                         $first = true;
                         foreach ( $voices as $val => [ $name, $desc ] ) :
+                            $id = 'voice-' . $val;
                         ?>
-                        <label class="pd-voice-option">
-                            <input type="radio" name="pitchdeck-voice" value="<?php echo esc_attr( $val ); ?>"<?php echo $first ? ' checked' : ''; ?> />
-                            <span class="pd-voice-info">
+                        <div class="pd-voice-option" data-voice="<?php echo esc_attr( $val ); ?>">
+                            <input type="radio" name="pitchdeck-voice" id="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $val ); ?>"<?php echo $first ? ' checked' : ''; ?> />
+                            <label for="<?php echo esc_attr( $id ); ?>" class="pd-voice-info">
                                 <span class="pd-voice-name"><?php echo esc_html( $name ); ?></span>
                                 <span class="pd-voice-desc"><?php echo esc_html( $desc ); ?></span>
-                            </span>
+                            </label>
                             <button type="button" class="pd-voice-preview-btn" data-voice="<?php echo esc_attr( $val ); ?>" title="Kuuntele">&#9654;</button>
-                        </label>
+                        </div>
                         <?php $first = false; endforeach; ?>
                     </div>
                 </div>

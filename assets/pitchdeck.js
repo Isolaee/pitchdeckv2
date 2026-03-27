@@ -27,9 +27,31 @@
             if (e.target.matches('.pitchdeck-generate-slide-audio-btn')) {
                 handleGenerateSlideAudio(parseInt(e.target.dataset.slide, 10));
             }
+
+            // Voice preview button
             if (e.target.matches('.pd-voice-preview-btn')) {
+                e.stopPropagation();
                 handleVoicePreview(e.target.dataset.voice, e.target);
+                return;
             }
+
+            // Clicking anywhere on the voice card selects it
+            const card = e.target.closest('.pd-voice-option');
+            if (card) {
+                const radio = card.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    document.querySelectorAll('.pd-voice-option').forEach(function (c) {
+                        c.classList.toggle('is-selected', c === card);
+                    });
+                }
+            }
+        });
+
+        // Set initial selected state
+        document.querySelectorAll('.pd-voice-option').forEach(function (card) {
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio && radio.checked) card.classList.add('is-selected');
         });
 
         wireDropzone();
