@@ -123,6 +123,17 @@ function pitchdeck_shortcode_render( array $atts ): string {
                         <option value="Swedish">Swedish</option>
                     </select>
                 </div>
+                <div class="pd-form-row">
+                    <label for="pitchdeck-voice" class="pd-label">Ääni</label>
+                    <select id="pitchdeck-voice" class="pd-select">
+                        <option value="alloy">Alloy — neutraali</option>
+                        <option value="echo">Echo — miehen ääni</option>
+                        <option value="fable">Fable — ilmekäs</option>
+                        <option value="nova">Nova — naisen ääni</option>
+                        <option value="onyx">Onyx — arvovaltainen</option>
+                        <option value="shimmer">Shimmer — pehmeä</option>
+                    </select>
+                </div>
                 <button type="submit" class="pd-btn pd-btn--primary">Luo skriptit</button>
             </form>
         </section>

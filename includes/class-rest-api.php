@@ -65,6 +65,12 @@ class Pitchdeck_REST_API {
                     'required' => false,
                     'type'     => 'array',
                 ],
+                'voice' => [
+                    'required'          => false,
+                    'type'              => 'string',
+                    'default'           => 'alloy',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
             ],
         ] );
 
@@ -391,9 +397,10 @@ class Pitchdeck_REST_API {
      * Returns: { success: bool, audio: [{slide_number, audio_url}, ...] }
      */
     public static function handle_generate_audio( WP_REST_Request $request ) {
-        $job_id       = $request->get_param( 'job_id' );
-        $only_slide   = $request->get_param( 'slide_number' );
+        $job_id        = $request->get_param( 'job_id' );
+        $only_slide    = $request->get_param( 'slide_number' );
         $scripts_param = $request->get_param( 'scripts' );
+        $voice         = $request->get_param( 'voice' ) ?: 'alloy';
 
         $slides = Pitchdeck_DB::get_slides_by_job( $job_id );
 
@@ -439,7 +446,7 @@ class Pitchdeck_REST_API {
             }
 
             try {
-                $audio_binary = Pitchdeck_OpenAI::generate_audio( $script_text );
+                $audio_binary = Pitchdeck_OpenAI::generate_audio( $script_text, $voice );
             } catch ( RuntimeException $e ) {
                 return new WP_Error( 'openai_tts_error', $e->getMessage(), [ 'status' => 502 ] );
             }

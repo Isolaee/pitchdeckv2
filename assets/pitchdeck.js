@@ -204,6 +204,11 @@
         });
     }
 
+    function selectedVoice() {
+        const el = document.getElementById('pitchdeck-voice');
+        return el ? el.value : 'alloy';
+    }
+
     function collectScripts() {
         return Array.from(document.querySelectorAll('.pitchdeck-script-textarea')).map(function (ta) {
             return {
@@ -244,7 +249,7 @@
             const response = await fetch(rest_url + '/generate-audio', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                body:    JSON.stringify({ job_id: currentJobId, slide_number: slideNumber, scripts: scripts }),
+                body:    JSON.stringify({ job_id: currentJobId, slide_number: slideNumber, scripts: scripts, voice: selectedVoice() }),
             });
             const data = await response.json();
             hideOverlay();
@@ -276,7 +281,7 @@
             const response = await fetch(rest_url + '/generate-audio', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                body:    JSON.stringify({ job_id: currentJobId, scripts: scripts }),
+                body:    JSON.stringify({ job_id: currentJobId, scripts: scripts, voice: selectedVoice() }),
             });
             const data = await response.json();
             hideOverlay();
