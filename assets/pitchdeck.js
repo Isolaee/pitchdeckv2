@@ -254,8 +254,7 @@
         btn.disabled = true;
 
         try {
-            const card = document.querySelector('.pd-voice-preview-btn[data-voice="' + voice + '"]');
-        const provider = card ? (card.dataset.provider || 'openai') : 'openai';
+            const provider = btn.dataset.provider || 'openai';
         const resp = await fetch(rest_url + '/preview-voice?voice=' + encodeURIComponent(voice) + '&provider=' + encodeURIComponent(provider), {
                 headers: { 'X-WP-Nonce': nonce },
             });
