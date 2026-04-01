@@ -68,13 +68,13 @@ class Pitchdeck_REST_API {
                 'voice' => [
                     'required'          => false,
                     'type'              => 'string',
-                    'default'           => 'alloy',
+                    'default'           => '21m00Tcm4TlvDq8ikWAM',
                     'sanitize_callback' => 'sanitize_text_field',
                 ],
                 'provider' => [
                     'required'          => false,
                     'type'              => 'string',
-                    'default'           => 'openai',
+                    'default'           => 'elevenlabs',
                     'sanitize_callback' => 'sanitize_text_field',
                 ],
             ],
@@ -425,8 +425,8 @@ class Pitchdeck_REST_API {
         $job_id        = $request->get_param( 'job_id' );
         $only_slide    = $request->get_param( 'slide_number' );
         $scripts_param = $request->get_param( 'scripts' );
-        $voice         = $request->get_param( 'voice' ) ?: 'alloy';
-        $provider      = $request->get_param( 'provider' ) ?: 'openai';
+        $voice         = $request->get_param( 'voice' ) ?: '21m00Tcm4TlvDq8ikWAM';
+        $provider      = $request->get_param( 'provider' ) ?: 'elevenlabs';
 
         $slides = Pitchdeck_DB::get_slides_by_job( $job_id );
 

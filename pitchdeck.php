@@ -128,44 +128,19 @@ function pitchdeck_shortcode_render( array $atts ): string {
                     <span class="pd-label">Ääni</span>
                     <div class="pd-voice-picker">
                         <?php
-                        $openai_voices = [
-                            'alloy'   => [ 'Alloy',   'Neutraali' ],
-                            'echo'    => [ 'Echo',    'Miehen ääni' ],
-                            'fable'   => [ 'Fable',   'Ilmekäs' ],
-                            'nova'    => [ 'Nova',    'Naisen ääni' ],
-                            'onyx'    => [ 'Onyx',    'Arvovaltainen' ],
-                            'shimmer' => [ 'Shimmer', 'Pehmeä' ],
-                        ];
-                        ?>
-                        <div class="pd-voice-provider-label">OpenAI</div>
-                        <?php
                         $first = true;
-                        foreach ( $openai_voices as $val => [ $name, $desc ] ) :
-                            $id = 'voice-' . $val;
-                        ?>
-                        <div class="pd-voice-option" data-voice="<?php echo esc_attr( $val ); ?>" data-provider="openai">
-                            <input type="radio" name="pitchdeck-voice" id="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $val ); ?>"<?php echo $first ? ' checked' : ''; ?> />
-                            <label for="<?php echo esc_attr( $id ); ?>" class="pd-voice-info">
-                                <span class="pd-voice-name"><?php echo esc_html( $name ); ?></span>
-                                <span class="pd-voice-desc"><?php echo esc_html( $desc ); ?></span>
-                            </label>
-                            <button type="button" class="pd-voice-preview-btn" data-voice="<?php echo esc_attr( $val ); ?>" data-provider="openai" title="Kuuntele">&#9654;</button>
-                        </div>
-                        <?php $first = false; endforeach; ?>
-
-                        <div class="pd-voice-provider-label">ElevenLabs</div>
-                        <?php foreach ( Pitchdeck_ElevenLabs::VOICES as $val => [ $name, $desc ] ) :
+                        foreach ( Pitchdeck_ElevenLabs::VOICES as $val => [ $name, $desc ] ) :
                             $id = 'voice-el-' . $val;
                         ?>
                         <div class="pd-voice-option" data-voice="<?php echo esc_attr( $val ); ?>" data-provider="elevenlabs">
-                            <input type="radio" name="pitchdeck-voice" id="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $val ); ?>" />
+                            <input type="radio" name="pitchdeck-voice" id="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $val ); ?>"<?php echo $first ? ' checked' : ''; ?> />
                             <label for="<?php echo esc_attr( $id ); ?>" class="pd-voice-info">
                                 <span class="pd-voice-name"><?php echo esc_html( $name ); ?></span>
                                 <span class="pd-voice-desc"><?php echo esc_html( $desc ); ?></span>
                             </label>
                             <button type="button" class="pd-voice-preview-btn" data-voice="<?php echo esc_attr( $val ); ?>" data-provider="elevenlabs" title="Kuuntele">&#9654;</button>
                         </div>
-                        <?php endforeach; ?>
+                        <?php $first = false; endforeach; ?>
                     </div>
                 </div>
                 <button type="submit" class="pd-btn pd-btn--primary">Luo skriptit</button>
