@@ -234,6 +234,11 @@
         return checked ? checked.value : 'alloy';
     }
 
+    function selectedProvider() {
+        const card = document.querySelector('.pd-voice-option.is-selected');
+        return card ? (card.dataset.provider || 'openai') : 'openai';
+    }
+
     // Cache of voice -> Audio object so repeated previews don't re-fetch.
     const voiceAudioCache = {};
 
@@ -249,7 +254,9 @@
         btn.disabled = true;
 
         try {
-            const resp = await fetch(rest_url + '/preview-voice?voice=' + encodeURIComponent(voice), {
+            const card = document.querySelector('.pd-voice-preview-btn[data-voice="' + voice + '"]');
+        const provider = card ? (card.dataset.provider || 'openai') : 'openai';
+        const resp = await fetch(rest_url + '/preview-voice?voice=' + encodeURIComponent(voice) + '&provider=' + encodeURIComponent(provider), {
                 headers: { 'X-WP-Nonce': nonce },
             });
             const data = await resp.json();
@@ -310,7 +317,7 @@
             const response = await fetch(rest_url + '/generate-audio', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                body:    JSON.stringify({ job_id: currentJobId, slide_number: slideNumber, scripts: scripts, voice: selectedVoice() }),
+                body:    JSON.stringify({ job_id: currentJobId, slide_number: slideNumber, scripts: scripts, voice: selectedVoice(), provider: selectedProvider() }),
             });
             const data = await response.json();
             hideOverlay();
@@ -342,7 +349,7 @@
             const response = await fetch(rest_url + '/generate-audio', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                body:    JSON.stringify({ job_id: currentJobId, scripts: scripts, voice: selectedVoice() }),
+                body:    JSON.stringify({ job_id: currentJobId, scripts: scripts, voice: selectedVoice(), provider: selectedProvider() }),
             });
             const data = await response.json();
             hideOverlay();

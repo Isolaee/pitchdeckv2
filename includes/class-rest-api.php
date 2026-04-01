@@ -71,6 +71,12 @@ class Pitchdeck_REST_API {
                     'default'           => 'alloy',
                     'sanitize_callback' => 'sanitize_text_field',
                 ],
+                'provider' => [
+                    'required'          => false,
+                    'type'              => 'string',
+                    'default'           => 'openai',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
             ],
         ] );
 
@@ -82,6 +88,12 @@ class Pitchdeck_REST_API {
                 'voice' => [
                     'required'          => true,
                     'type'              => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
+                'provider' => [
+                    'required'          => false,
+                    'type'              => 'string',
+                    'default'           => 'openai',
                     'sanitize_callback' => 'sanitize_text_field',
                 ],
             ],
@@ -414,6 +426,7 @@ class Pitchdeck_REST_API {
         $only_slide    = $request->get_param( 'slide_number' );
         $scripts_param = $request->get_param( 'scripts' );
         $voice         = $request->get_param( 'voice' ) ?: 'alloy';
+        $provider      = $request->get_param( 'provider' ) ?: 'openai';
 
         $slides = Pitchdeck_DB::get_slides_by_job( $job_id );
 
@@ -459,9 +472,13 @@ class Pitchdeck_REST_API {
             }
 
             try {
-                $audio_binary = Pitchdeck_OpenAI::generate_audio( $script_text, $voice );
+                if ( 'elevenlabs' === $provider ) {
+                    $audio_binary = Pitchdeck_ElevenLabs::generate_audio( $script_text, $voice );
+                } else {
+                    $audio_binary = Pitchdeck_OpenAI::generate_audio( $script_text, $voice );
+                }
             } catch ( RuntimeException $e ) {
-                return new WP_Error( 'openai_tts_error', $e->getMessage(), [ 'status' => 502 ] );
+                return new WP_Error( 'tts_error', $e->getMessage(), [ 'status' => 502 ] );
             }
 
             $filename = "slide-{$slide_number}.mp3";
@@ -492,21 +509,32 @@ class Pitchdeck_REST_API {
      * The file is generated once and cached on disk; subsequent calls return the cached URL.
      */
     public static function handle_preview_voice( WP_REST_Request $request ) {
-        $allowed = [ 'alloy', 'echo', 'fable', 'nova', 'onyx', 'shimmer' ];
-        $voice   = $request->get_param( 'voice' );
+        $voice    = $request->get_param( 'voice' );
+        $provider = $request->get_param( 'provider' ) ?: 'openai';
 
-        if ( ! in_array( $voice, $allowed, true ) ) {
-            return new WP_Error( 'invalid_voice', 'Invalid voice name.', [ 'status' => 400 ] );
+        $openai_voices     = [ 'alloy', 'echo', 'fable', 'nova', 'onyx', 'shimmer' ];
+        $elevenlabs_voices = array_keys( Pitchdeck_ElevenLabs::VOICES );
+
+        if ( 'elevenlabs' === $provider ) {
+            if ( ! in_array( $voice, $elevenlabs_voices, true ) ) {
+                return new WP_Error( 'invalid_voice', 'Invalid ElevenLabs voice ID.', [ 'status' => 400 ] );
+            }
+            $cache_key = 'el-' . $voice;
+        } else {
+            if ( ! in_array( $voice, $openai_voices, true ) ) {
+                return new WP_Error( 'invalid_voice', 'Invalid voice name.', [ 'status' => 400 ] );
+            }
+            $cache_key = $voice;
         }
 
         $upload_dir  = wp_upload_dir();
         $sample_dir  = trailingslashit( $upload_dir['basedir'] ) . 'pitchdeck/voice-samples/';
         $sample_url  = trailingslashit( $upload_dir['baseurl'] ) . 'pitchdeck/voice-samples/';
-        $sample_file = $sample_dir . $voice . '.mp3';
+        $sample_file = $sample_dir . $cache_key . '.mp3';
 
         // Serve the cached file if it already exists.
         if ( file_exists( $sample_file ) ) {
-            return rest_ensure_response( [ 'url' => $sample_url . $voice . '.mp3' ] );
+            return rest_ensure_response( [ 'url' => $sample_url . $cache_key . '.mp3' ] );
         }
 
         wp_mkdir_p( $sample_dir );
@@ -514,7 +542,11 @@ class Pitchdeck_REST_API {
         $sample_text = 'Tervetuloa esitykseen. Tämä on esimerkki äänestä, jonka voit valita selostuksellesi.';
 
         try {
-            $audio_binary = Pitchdeck_OpenAI::generate_audio( $sample_text, $voice );
+            if ( 'elevenlabs' === $provider ) {
+                $audio_binary = Pitchdeck_ElevenLabs::generate_audio( $sample_text, $voice );
+            } else {
+                $audio_binary = Pitchdeck_OpenAI::generate_audio( $sample_text, $voice );
+            }
         } catch ( RuntimeException $e ) {
             return new WP_Error( 'tts_error', $e->getMessage(), [ 'status' => 502 ] );
         }
@@ -523,7 +555,7 @@ class Pitchdeck_REST_API {
             return new WP_Error( 'file_write_error', 'Could not save sample audio.', [ 'status' => 500 ] );
         }
 
-        return rest_ensure_response( [ 'url' => $sample_url . $voice . '.mp3' ] );
+        return rest_ensure_response( [ 'url' => $sample_url . $cache_key . '.mp3' ] );
     }
 
     /**

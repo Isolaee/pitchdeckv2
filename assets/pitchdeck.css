@@ -366,6 +366,16 @@
     gap: 10px;
 }
 
+.pd-voice-provider-label {
+    grid-column: 1 / -1;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--pd-muted);
+    padding-top: 4px;
+}
+
 .pd-voice-option {
     display: flex;
     align-items: center;
