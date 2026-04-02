@@ -4,15 +4,13 @@ defined( 'ABSPATH' ) || exit;
 class Pitchdeck_ElevenLabs {
 
     /**
-     * Known pre-made ElevenLabs voices: voice_id => [display_name, description].
+     * ElevenLabs voices: voice_id => [display_name, description, stability, speed, use_speaker_boost].
      */
     const VOICES = [
-        '21m00Tcm4TlvDq8ikWAM' => [ 'Rachel',    'Neutraali nainen' ],
-        'pNInz6obpgDQGcFmaJgB' => [ 'Adam',      'Syvä mies' ],
-        'onwK4e9ZLuTAKqWW03F9' => [ 'Daniel',    'Brittiläinen mies' ],
-        'XB0fDUnXU5powFXDhCwa' => [ 'Charlotte', 'Pehmeä nainen' ],
-        'TX3LPaxmHKxFdv7VOQHJ' => [ 'Liam',      'Selkeä mies' ],
-        'pFZP5JQG7iQjIQuC4Bku' => [ 'Lily',      'Brittiläinen nainen' ],
+        'fC33e0BIKA7wWK2MeARj' => [ 'Miika',  'Diplomaattinen ja vakaa',    0.39, 0.87, true  ],
+        'ULbs8g3EYdQWA5MDrrx1' => [ 'Akseli', 'Rauhallinen ja selkeä',      0.50, 1.00, true  ],
+        'Gp43kq9FsSlavD7esRtx' => [ 'Vaino',  'Rauhallinen ja sielullinen', 0.39, 1.03, true  ],
+        'RiWFFlzYFZuu4lPMig3i' => [ 'Soili',  'Neutraali ja kevyt',         0.77, 0.95, false ],
     ];
 
     /**
@@ -41,8 +39,10 @@ class Pitchdeck_ElevenLabs {
                     'text'           => $script,
                     'model_id'       => 'eleven_multilingual_v2',
                     'voice_settings' => [
-                        'stability'        => 0.5,
-                        'similarity_boost' => 0.75,
+                        'stability'         => self::VOICES[ $voice_id ][2] ?? 0.5,
+                        'similarity_boost'  => 0.75,
+                        'speed'             => self::VOICES[ $voice_id ][3] ?? 1.0,
+                        'use_speaker_boost' => self::VOICES[ $voice_id ][4] ?? true,
                     ],
                 ] ),
             ]
