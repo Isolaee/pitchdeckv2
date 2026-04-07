@@ -25,6 +25,7 @@ require_once PITCHDECK_PLUGIN_DIR . 'includes/class-elevenlabs.php';
 require_once PITCHDECK_PLUGIN_DIR . 'includes/class-slide-renderer.php';
 require_once PITCHDECK_PLUGIN_DIR . 'includes/class-rest-api.php';
 require_once PITCHDECK_PLUGIN_DIR . 'includes/class-admin.php';
+require_once PITCHDECK_PLUGIN_DIR . 'includes/class-woocommerce.php';
 
 // Create / upgrade DB table on activation and on plugin load when version changes.
 register_activation_hook( __FILE__, [ 'Pitchdeck_DB', 'create_table' ] );
@@ -41,6 +42,9 @@ add_action( 'rest_api_init', [ 'Pitchdeck_REST_API', 'register_routes' ] );
 if ( is_admin() ) {
     Pitchdeck_Admin::init();
 }
+
+// Boot WooCommerce integration (only when WooCommerce is active).
+add_action( 'woocommerce_loaded', [ 'Pitchdeck_WooCommerce', 'init' ] );
 
 // Register shortcode.
 add_shortcode( 'pitchdeck', 'pitchdeck_shortcode_render' );
@@ -165,7 +169,7 @@ function pitchdeck_shortcode_render( array $atts ): string {
                 <video id="pitchdeck-video-player" controls></video>
             </div>
             <div class="pd-action-row">
-                <a id="pitchdeck-video-download" href="#" download class="pd-btn pd-btn--primary">Lataa MP4</a>
+                <button id="pitchdeck-buy-btn" class="pd-btn pd-btn--primary">Osta ja lataa MP4</button>
                 <button id="pd-start-over-btn" class="pd-btn pd-btn--ghost">Aloita alusta</button>
             </div>
         </section>

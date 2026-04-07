@@ -115,6 +115,36 @@ class Pitchdeck_REST_API {
                 ],
             ],
         ] );
+
+        register_rest_route( self::NAMESPACE, '/checkout', [
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => [ __CLASS__, 'handle_checkout' ],
+            'permission_callback' => '__return_true',
+            'args'                => [
+                'job_id' => [
+                    'required'          => true,
+                    'type'              => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
+            ],
+        ] );
+
+        register_rest_route( self::NAMESPACE, '/download', [
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [ __CLASS__, 'handle_download' ],
+            'permission_callback' => '__return_true',
+            'args'                => [
+                'order_id' => [
+                    'required' => true,
+                    'type'     => 'integer',
+                ],
+                'order_key' => [
+                    'required'          => true,
+                    'type'              => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ],
+            ],
+        ] );
     }
 
     /**
@@ -556,6 +586,101 @@ class Pitchdeck_REST_API {
         }
 
         return rest_ensure_response( [ 'url' => $sample_url . $cache_key . '.mp3' ] );
+    }
+
+    /**
+     * POST /wp-json/pitchdeck/v1/checkout
+     *
+     * Accepts: application/json { job_id: string }
+     * Stores job_id in WC session, empties cart, adds the configured pitchdeck
+     * product, then returns the WooCommerce checkout URL for JS to redirect to.
+     */
+    public static function handle_checkout( WP_REST_Request $request ) {
+        if ( ! function_exists( 'WC' ) ) {
+            return new WP_Error( 'woocommerce_missing', 'WooCommerce is not active.', [ 'status' => 500 ] );
+        }
+
+        $job_id     = $request->get_param( 'job_id' );
+        $product_id = (int) get_option( 'pitchdeck_product_id', 0 );
+
+        if ( ! $product_id || ! wc_get_product( $product_id ) ) {
+            return new WP_Error(
+                'no_product',
+                'Pitchdeck-tuotetta ei ole määritetty. Ota yhteyttä sivuston ylläpitäjään.',
+                [ 'status' => 500 ]
+            );
+        }
+
+        // Verify the video file exists before sending the customer to checkout.
+        $upload_dir = wp_upload_dir();
+        $video_path = trailingslashit( $upload_dir['basedir'] ) . 'pitchdeck/' . $job_id . '/output.mp4';
+        if ( ! file_exists( $video_path ) ) {
+            return new WP_Error( 'no_video', 'Videota ei löydy. Luo video ensin.', [ 'status' => 404 ] );
+        }
+
+        // Ensure WC session cookie is sent with this response so the cart
+        // and session survive the redirect to the checkout page.
+        if ( WC()->session && ! WC()->session->has_session() ) {
+            WC()->session->set_customer_session_cookie( true );
+        }
+
+        // Persist the job_id so it can be attached to the order on creation.
+        WC()->session->set( 'pitchdeck_job_id', $job_id );
+
+        WC()->cart->empty_cart();
+        WC()->cart->add_to_cart( $product_id );
+
+        return rest_ensure_response( [
+            'success'      => true,
+            'checkout_url' => wc_get_checkout_url(),
+        ] );
+    }
+
+    /**
+     * GET /wp-json/pitchdeck/v1/download?order_id=X&order_key=Y
+     *
+     * Validates that the order is paid and carries a pitchdeck job_id, then
+     * streams the output.mp4 directly to the browser as a file download.
+     * Security is provided by the WooCommerce order key (random, unguessable).
+     */
+    public static function handle_download( WP_REST_Request $request ) {
+        if ( ! function_exists( 'WC' ) ) {
+            return new WP_Error( 'woocommerce_missing', 'WooCommerce is not active.', [ 'status' => 500 ] );
+        }
+
+        $order_id  = (int) $request->get_param( 'order_id' );
+        $order_key = $request->get_param( 'order_key' );
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order || ! hash_equals( $order->get_order_key(), $order_key ) ) {
+            return new WP_Error( 'invalid_order', 'Virheellinen tilaus.', [ 'status' => 403 ] );
+        }
+
+        if ( ! $order->is_paid() ) {
+            return new WP_Error( 'not_paid', 'Tilausta ei ole maksettu.', [ 'status' => 403 ] );
+        }
+
+        $job_id = $order->get_meta( '_pitchdeck_job_id' );
+        if ( ! $job_id ) {
+            return new WP_Error( 'no_job', 'Tilaukseen ei liity videota.', [ 'status' => 404 ] );
+        }
+
+        $upload_dir = wp_upload_dir();
+        $video_path = trailingslashit( $upload_dir['basedir'] ) . 'pitchdeck/' . $job_id . '/output.mp4';
+
+        if ( ! file_exists( $video_path ) ) {
+            return new WP_Error( 'file_missing', 'Videotiedostoa ei löydy.', [ 'status' => 404 ] );
+        }
+
+        // Stream the file — bypass REST JSON encoding with exit.
+        header( 'Content-Type: video/mp4' );
+        header( 'Content-Disposition: attachment; filename="pitchdeck-video.mp4"' );
+        header( 'Content-Length: ' . filesize( $video_path ) );
+        header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+        header( 'Pragma: no-cache' );
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_readfile
+        readfile( $video_path );
+        exit;
     }
 
     /**

@@ -22,6 +22,9 @@
         document.getElementById('pitchdeck-video-btn')
             .addEventListener('click', handleGenerateVideo);
 
+        document.getElementById('pitchdeck-buy-btn')
+            .addEventListener('click', handleBuyVideo);
+
         // Per-slide VO button delegation
         document.addEventListener('click', function (e) {
             if (e.target.matches('.pitchdeck-generate-slide-audio-btn')) {
@@ -394,15 +397,45 @@
                 return;
             }
 
-            const player   = document.getElementById('pitchdeck-video-player');
-            const download = document.getElementById('pitchdeck-video-download');
-            if (player)   { player.src = data.video_url; player.load(); }
-            if (download) download.href = data.video_url;
+            const player = document.getElementById('pitchdeck-video-player');
+            if (player) { player.src = data.video_url; player.load(); }
 
             showStep(4);
         } catch (err) {
             hideOverlay();
             setStatus('Verkkovirhe videon luonnin aikana. Yritä uudelleen.', 'error');
+        }
+    }
+
+    /* ── Buy video (WooCommerce checkout) ────────────────────────── */
+
+    async function handleBuyVideo() {
+        if (!currentJobId) {
+            setStatus('Ei ladattua työtä. Lataa ensin esitys.', 'error');
+            return;
+        }
+
+        showOverlay('Siirrytään kassalle\u2026');
+
+        try {
+            const response = await fetch(rest_url + '/checkout', {
+                method:      'POST',
+                credentials: 'same-origin',
+                headers:     { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+                body:        JSON.stringify({ job_id: currentJobId }),
+            });
+            const data = await response.json();
+            hideOverlay();
+
+            if (!response.ok) {
+                setStatus('Kassalle siirtyminen epäonnistui: ' + (data.message || 'Tuntematon virhe.'), 'error');
+                return;
+            }
+
+            window.location.href = data.checkout_url;
+        } catch (err) {
+            hideOverlay();
+            setStatus('Verkkovirhe kassalle siirtyessä. Yritä uudelleen.', 'error');
         }
     }
 

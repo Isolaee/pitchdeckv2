@@ -7,6 +7,7 @@ class Pitchdeck_Admin {
     const OPTION_PAGE       = 'pitchdeck-settings';
     const OPTION_OPENAI     = 'pitchdeck_openai_api_key';
     const OPTION_ELEVENLABS = 'pitchdeck_elevenlabs_api_key';
+    const OPTION_PRODUCT_ID = 'pitchdeck_product_id';
 
     public static function init(): void {
         add_action( 'admin_menu', [ __CLASS__, 'add_menu' ] );
@@ -67,6 +68,31 @@ class Pitchdeck_Admin {
             [ __CLASS__, 'render_elevenlabs_api_key_field' ],
             self::OPTION_PAGE,
             'pitchdeck_api_section'
+        );
+
+        register_setting(
+            self::OPTION_GROUP,
+            self::OPTION_PRODUCT_ID,
+            [
+                'type'              => 'integer',
+                'sanitize_callback' => 'absint',
+                'default'           => 0,
+            ]
+        );
+
+        add_settings_section(
+            'pitchdeck_woocommerce_section',
+            'WooCommerce',
+            '__return_false',
+            self::OPTION_PAGE
+        );
+
+        add_settings_field(
+            self::OPTION_PRODUCT_ID,
+            'Pitchdeck Product ID',
+            [ __CLASS__, 'render_product_id_field' ],
+            self::OPTION_PAGE,
+            'pitchdeck_woocommerce_section'
         );
     }
 
@@ -307,6 +333,26 @@ class Pitchdeck_Admin {
 
         $tier = $body['subscription']['tier'] ?? 'unknown';
         wp_send_json_success( "API key is valid. Plan: {$tier}." );
+    }
+
+    public static function render_product_id_field(): void {
+        $value = (int) get_option( self::OPTION_PRODUCT_ID, 0 );
+        ?>
+        <input
+            type="number"
+            id="<?php echo esc_attr( self::OPTION_PRODUCT_ID ); ?>"
+            name="<?php echo esc_attr( self::OPTION_PRODUCT_ID ); ?>"
+            value="<?php echo esc_attr( $value ?: '' ); ?>"
+            class="small-text"
+            min="0"
+            step="1"
+        />
+        <p class="description">
+            The ID of the WooCommerce product customers purchase to download their video.
+            Create a <strong>Simple</strong> product in WooCommerce (virtual, not downloadable —
+            the plugin handles the download), set your price, then paste its ID here.
+        </p>
+        <?php
     }
 
     public static function render_page(): void {
