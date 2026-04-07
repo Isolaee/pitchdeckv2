@@ -181,6 +181,15 @@ function pitchdeck_shortcode_render( array $atts ): string {
             <div class="pd-welcome-box">
                 <p><?php echo esc_html( Pitchdeck_Admin::get_text( 'popup_p1' ) ); ?></p>
                 <p><?php echo esc_html( Pitchdeck_Admin::get_text( 'popup_p2' ) ); ?></p>
+                <?php
+                $pd_product_id = (int) get_option( 'pitchdeck_product_id', 0 );
+                if ( $pd_product_id && function_exists( 'wc_get_product' ) ) {
+                    $pd_product = wc_get_product( $pd_product_id );
+                    if ( $pd_product ) {
+                        echo '<p class="pd-welcome-price">' . $pd_product->get_price_html() . '</p>';
+                    }
+                }
+                ?>
                 <div class="pd-welcome-action">
                     <button id="pd-welcome-close-btn" class="pd-btn pd-btn--primary pd-btn--lg"><?php echo esc_html( Pitchdeck_Admin::get_text( 'popup_btn' ) ); ?></button>
                 </div>

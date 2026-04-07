@@ -54,6 +54,14 @@
 
 .pd-welcome-box p:last-of-type { margin-bottom: 0; }
 
+.pd-welcome-price {
+    margin: 20px 0 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--pd-accent);
+    text-align: center;
+}
+
 .pd-welcome-action {
     margin-top: 28px;
     text-align: center;
