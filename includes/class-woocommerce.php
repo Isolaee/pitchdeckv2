@@ -17,6 +17,15 @@ class Pitchdeck_WooCommerce {
 
         // Show the download button on the thank-you page.
         add_action( 'woocommerce_thankyou',                     [ __CLASS__, 'render_download_button' ] );
+
+        // Include download link in order confirmation / completed emails.
+        add_action( 'woocommerce_email_after_order_table',      [ __CLASS__, 'add_download_link_to_email' ], 10, 4 );
+
+        // Schedule 48-hour video deletion when payment is confirmed.
+        add_action( 'woocommerce_payment_complete',             [ __CLASS__, 'schedule_video_cleanup' ] );
+
+        // Cron handler.
+        add_action( 'pitchdeck_delete_video',                   [ __CLASS__, 'delete_video_files' ] );
     }
 
     /**
@@ -114,6 +123,110 @@ class Pitchdeck_WooCommerce {
         echo '<p>' . esc_html__( 'Videosi on valmis. Klikkaa alla olevaa painiketta ladataksesi MP4-tiedoston.', 'pitchdeck' ) . '</p>';
         echo '<a href="' . esc_url( $download_url ) . '" class="button wc-forward">'
             . esc_html__( 'Lataa MP4', 'pitchdeck' ) . '</a>';
+        echo '<p style="color:#888;font-size:0.9em;">'
+            . esc_html__( 'Linkki on voimassa 48 tuntia.', 'pitchdeck' ) . '</p>';
         echo '</div>';
+    }
+
+    /**
+     * Add the download link to customer-facing WooCommerce emails.
+     *
+     * @param WC_Order $order
+     * @param bool     $sent_to_admin
+     * @param bool     $plain_text
+     * @param WC_Email $email
+     */
+    public static function add_download_link_to_email( $order, bool $sent_to_admin, bool $plain_text, $email ): void {
+        // Only attach to customer emails (not admin notifications).
+        if ( $sent_to_admin ) {
+            return;
+        }
+
+        // Only attach once the order is paid (processing / completed emails).
+        if ( ! $order->is_paid() ) {
+            return;
+        }
+
+        $job_id = $order->get_meta( '_pitchdeck_job_id' );
+        if ( ! $job_id ) {
+            return;
+        }
+
+        $download_url = add_query_arg(
+            [
+                'order_id'  => $order->get_id(),
+                'order_key' => $order->get_order_key(),
+            ],
+            rest_url( 'pitchdeck/v1/download' )
+        );
+
+        if ( $plain_text ) {
+            echo "\n";
+            echo esc_html__( 'Pitchdeck-videosi', 'pitchdeck' ) . "\n";
+            echo esc_html__( 'Lataa MP4-video alla olevasta linkistä (linkki on voimassa 48 tuntia):', 'pitchdeck' ) . "\n";
+            echo esc_url( $download_url ) . "\n\n";
+        } else {
+            echo '<div style="margin:24px 0;padding:16px;border:1px solid #e0e0e0;border-radius:4px;">';
+            echo '<h2 style="margin:0 0 8px;">' . esc_html__( 'Pitchdeck-videosi', 'pitchdeck' ) . '</h2>';
+            echo '<p style="margin:0 0 12px;">'
+                . esc_html__( 'Lataa MP4-video alla olevasta linkistä. Linkki on voimassa 48 tuntia.', 'pitchdeck' )
+                . '</p>';
+            echo '<a href="' . esc_url( $download_url ) . '" '
+                . 'style="display:inline-block;padding:10px 20px;background:#2271b1;color:#fff;'
+                . 'text-decoration:none;border-radius:3px;font-weight:bold;">'
+                . esc_html__( 'Lataa MP4', 'pitchdeck' )
+                . '</a>';
+            echo '</div>';
+        }
+    }
+
+    /**
+     * Schedule deletion of the video files 48 hours after payment.
+     *
+     * @param int $order_id
+     */
+    public static function schedule_video_cleanup( int $order_id ): void {
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
+
+        $job_id = $order->get_meta( '_pitchdeck_job_id' );
+        if ( ! $job_id ) {
+            return;
+        }
+
+        // Avoid scheduling duplicates (e.g. if the payment webhook fires twice).
+        if ( wp_next_scheduled( 'pitchdeck_delete_video', [ $job_id ] ) ) {
+            return;
+        }
+
+        wp_schedule_single_event( time() + 2 * DAY_IN_SECONDS, 'pitchdeck_delete_video', [ $job_id ] );
+    }
+
+    /**
+     * Delete all files in the job's upload directory.
+     * Called by the 'pitchdeck_delete_video' cron event.
+     *
+     * @param string $job_id
+     */
+    public static function delete_video_files( string $job_id ): void {
+        $upload_dir = wp_upload_dir();
+        $job_dir    = trailingslashit( $upload_dir['basedir'] ) . 'pitchdeck/' . $job_id . '/';
+
+        if ( ! is_dir( $job_dir ) ) {
+            return;
+        }
+
+        $files = glob( $job_dir . '*' );
+        if ( is_array( $files ) ) {
+            foreach ( $files as $file ) {
+                if ( is_file( $file ) ) {
+                    @unlink( $file );
+                }
+            }
+        }
+
+        @rmdir( $job_dir );
     }
 }
