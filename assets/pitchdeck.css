@@ -24,6 +24,41 @@
     line-height: 1.5;
 }
 
+/* ── Welcome popup ───────────────────────────────────────────────── */
+
+#pd-welcome-popup { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; }
+#pd-welcome-popup[hidden] { display: none; }
+
+.pd-welcome-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.pd-welcome-box {
+    position: relative;
+    background: var(--pd-surface);
+    border-radius: var(--pd-radius);
+    padding: 40px 44px;
+    max-width: 520px;
+    width: calc(100% - 40px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.28);
+    line-height: 1.7;
+}
+
+.pd-welcome-box p {
+    margin: 0 0 16px;
+    color: var(--pd-text);
+    font-size: .95rem;
+}
+
+.pd-welcome-box p:last-of-type { margin-bottom: 0; }
+
+.pd-welcome-action {
+    margin-top: 28px;
+    text-align: center;
+}
+
 /* ── Loading overlay ─────────────────────────────────────────────── */
 
 #pd-overlay {

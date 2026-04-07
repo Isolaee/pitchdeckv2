@@ -8,6 +8,7 @@ class Pitchdeck_Admin {
     const OPTION_OPENAI     = 'pitchdeck_openai_api_key';
     const OPTION_ELEVENLABS = 'pitchdeck_elevenlabs_api_key';
     const OPTION_PRODUCT_ID = 'pitchdeck_product_id';
+    const OPTION_TEXTS      = 'pitchdeck_texts';
 
     public static function init(): void {
         add_action( 'admin_menu', [ __CLASS__, 'add_menu' ] );
@@ -26,74 +27,187 @@ class Pitchdeck_Admin {
         );
     }
 
+    // ── Text field definitions ────────────────────────────────────────
+
+    /**
+     * All configurable text fields with their section, label, type and default value.
+     */
+    private static function text_definitions(): array {
+        return [
+            // Popup window
+            'popup_p1'          => [ 'section' => 'popup',   'label' => 'Popup: first paragraph',                          'type' => 'textarea', 'default' => 'Pitch deck herättää kiinnostuksen – mutta harvoin yksin riittää. Dekissä on rajallisesti tilaa kertoa idean tausta, markkina, kilpailuetu ja kasvupotentiaali. Sijoittajille jää helposti kysymyksiä, jotka vaativat erillisiä tapaamisia tai lisämateriaaleja.' ],
+            'popup_p2'          => [ 'section' => 'popup',   'label' => 'Popup: second paragraph',                         'type' => 'textarea', 'default' => 'Muuttamalla pitch deckin videoksi viet viestisi seuraavalle tasolle. Video antaa mahdollisuuden avata ideaa syvällisemmin, kertoa tarina vakuuttavammin ja tuoda esiin juuri ne asiat, jotka ratkaisevat sijoittajan kiinnostuksen. Samalla tavoitat laajemman joukon kiinnostuneita sijoittajia helposti ja tehokkaasti, silloin kun heille parhaiten sopii.' ],
+            'popup_btn'         => [ 'section' => 'popup',   'label' => 'Popup: button',                                   'type' => 'text',     'default' => 'Jatka' ],
+            // Navigation
+            'step_1'            => [ 'section' => 'nav',     'label' => 'Step 1 label',                                    'type' => 'text',     'default' => 'Aloitus' ],
+            'step_2'            => [ 'section' => 'nav',     'label' => 'Step 2 label',                                    'type' => 'text',     'default' => 'Lataus' ],
+            'step_3'            => [ 'section' => 'nav',     'label' => 'Step 3 label',                                    'type' => 'text',     'default' => 'Skriptit' ],
+            'step_4'            => [ 'section' => 'nav',     'label' => 'Step 4 label',                                    'type' => 'text',     'default' => 'Video' ],
+            // Panel 1 – Landing
+            'hero_title'        => [ 'section' => 'panel1',  'label' => 'Panel 1: hero title',                             'type' => 'text',     'default' => 'Muuta esityksesi ääniselostevideoksi' ],
+            'hero_body'         => [ 'section' => 'panel1',  'label' => 'Panel 1: hero body',                              'type' => 'textarea', 'default' => 'Lataa PPTX tai PDF, anna tekoälyn kirjoittaa selostusteksti jokaiselle dialle, muokkaa tekstiä ja vie valmis MP4.' ],
+            'step_n1_label'     => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 1 label',                   'type' => 'text',     'default' => 'Lataa' ],
+            'step_n1_desc'      => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 1 description',             'type' => 'text',     'default' => 'PPTX tai PDF' ],
+            'step_n2_label'     => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 2 label',                   'type' => 'text',     'default' => 'Luo' ],
+            'step_n2_desc'      => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 2 description',             'type' => 'text',     'default' => 'Tekoäly kirjoittaa skriptit' ],
+            'step_n3_label'     => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 3 label',                   'type' => 'text',     'default' => 'Muokkaa' ],
+            'step_n3_desc'      => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 3 description',             'type' => 'text',     'default' => 'Tarkista selostukset' ],
+            'step_n4_label'     => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 4 label',                   'type' => 'text',     'default' => 'Vie' ],
+            'step_n4_desc'      => [ 'section' => 'panel1',  'label' => 'Panel 1: process step 4 description',             'type' => 'text',     'default' => 'Lataa MP4' ],
+            'btn_start'         => [ 'section' => 'panel1',  'label' => 'Panel 1: get started button',                     'type' => 'text',     'default' => 'Aloita →' ],
+            // Panel 2 – Upload
+            'p2_title'          => [ 'section' => 'panel2',  'label' => 'Panel 2: title',                                  'type' => 'text',     'default' => 'Lataa esityksesi' ],
+            'p2_subtitle'       => [ 'section' => 'panel2',  'label' => 'Panel 2: subtitle',                               'type' => 'text',     'default' => 'Tuetut formaatit: .pptx ja .pdf' ],
+            'dropzone_text'     => [ 'section' => 'panel2',  'label' => 'Panel 2: dropzone text',                          'type' => 'text',     'default' => 'Valitse tiedosto tai vedä se tähän' ],
+            'dropzone_hint'     => [ 'section' => 'panel2',  'label' => 'Panel 2: dropzone hint',                          'type' => 'text',     'default' => '.pptx tai .pdf' ],
+            'lang_label'        => [ 'section' => 'panel2',  'label' => 'Panel 2: language selector label',                'type' => 'text',     'default' => 'Skriptin kieli' ],
+            'voice_label'       => [ 'section' => 'panel2',  'label' => 'Panel 2: voice picker label',                     'type' => 'text',     'default' => 'Ääni' ],
+            'btn_upload'        => [ 'section' => 'panel2',  'label' => 'Panel 2: generate scripts button',                'type' => 'text',     'default' => 'Luo skriptit' ],
+            // Panel 3 – Scripts
+            'p3_title'          => [ 'section' => 'panel3',  'label' => 'Panel 3: title',                                  'type' => 'text',     'default' => 'Tarkista ja muokkaa skriptit' ],
+            'p3_subtitle'       => [ 'section' => 'panel3',  'label' => 'Panel 3: subtitle',                               'type' => 'textarea', 'default' => 'Jokainen skripti luetaan ääneen sen dialle. Äänitys käyttää täsmälleen sitä, mitä näet tässä.' ],
+            'btn_audio'         => [ 'section' => 'panel3',  'label' => 'Panel 3: generate all audio button',              'type' => 'text',     'default' => 'Luo kaikki äänitykset' ],
+            'btn_video'         => [ 'section' => 'panel3',  'label' => 'Panel 3: generate video button',                  'type' => 'text',     'default' => 'Luo video' ],
+            // Panel 4 – Video
+            'p4_title'          => [ 'section' => 'panel4',  'label' => 'Panel 4: title',                                  'type' => 'text',     'default' => 'Videosi on valmis' ],
+            'btn_buy'           => [ 'section' => 'panel4',  'label' => 'Panel 4: buy button',                             'type' => 'text',     'default' => 'Osta ja lataa MP4' ],
+            'btn_restart'       => [ 'section' => 'panel4',  'label' => 'Panel 4: start over button',                      'type' => 'text',     'default' => 'Aloita alusta' ],
+            // Dynamic JS texts
+            'slide_label'       => [ 'section' => 'dynamic', 'label' => 'Slide heading prefix ({n} = slide number)',        'type' => 'text',     'default' => 'Dia' ],
+            'btn_slide_audio'   => [ 'section' => 'dynamic', 'label' => 'Per-slide audio button',                          'type' => 'text',     'default' => 'Luo äänitys tälle dialle' ],
+            'overlay_upload'    => [ 'section' => 'dynamic', 'label' => 'Overlay: uploading file',                         'type' => 'text',     'default' => 'Ladataan ja puretaan dioja,…' ],
+            'overlay_save'      => [ 'section' => 'dynamic', 'label' => 'Overlay: saving slides ({n} = slide count)',      'type' => 'text',     'default' => 'Tallennetaan {n} dia…' ],
+            'overlay_script'    => [ 'section' => 'dynamic', 'label' => 'Overlay: generating scripts',                     'type' => 'text',     'default' => 'Luodaan käsikirjoitusta,… tämä voi kestää hetken.' ],
+            'overlay_audio'     => [ 'section' => 'dynamic', 'label' => 'Overlay: generating all audio',                   'type' => 'text',     'default' => 'Luodaan äänityksiä… tämä voi kestää hetken.' ],
+            'overlay_slide_audio' => [ 'section' => 'dynamic', 'label' => 'Overlay: per-slide audio ({n} = slide number)', 'type' => 'text',     'default' => 'Luodaan äänitys dialle {n}…' ],
+            'overlay_video'     => [ 'section' => 'dynamic', 'label' => 'Overlay: generating video',                       'type' => 'text',     'default' => 'Luodaan videota,… tämä voi kestää useita minuutteja.' ],
+            'overlay_checkout'  => [ 'section' => 'dynamic', 'label' => 'Overlay: redirecting to checkout',                'type' => 'text',     'default' => 'Siirrytään kassalle…' ],
+        ];
+    }
+
+    /**
+     * Returns the saved text for $key, falling back to the hardcoded default.
+     * Empty string in the saved option is treated as "not set" so the default shows.
+     */
+    public static function get_text( string $key ): string {
+        static $saved = null;
+        if ( null === $saved ) {
+            $saved = (array) get_option( self::OPTION_TEXTS, [] );
+        }
+        if ( isset( $saved[ $key ] ) && '' !== $saved[ $key ] ) {
+            return $saved[ $key ];
+        }
+        $defs = self::text_definitions();
+        return $defs[ $key ]['default'] ?? '';
+    }
+
+    /**
+     * Returns all texts as a flat key→value array (for wp_localize_script).
+     */
+    public static function get_all_texts(): array {
+        $out = [];
+        foreach ( array_keys( self::text_definitions() ) as $key ) {
+            $out[ $key ] = self::get_text( $key );
+        }
+        return $out;
+    }
+
+    // ── Settings registration ─────────────────────────────────────────
+
     public static function register_settings(): void {
+        // API keys
+        register_setting( self::OPTION_GROUP, self::OPTION_OPENAI,     [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+        register_setting( self::OPTION_GROUP, self::OPTION_ELEVENLABS, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+        register_setting( self::OPTION_GROUP, self::OPTION_PRODUCT_ID, [ 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 0 ] );
+
+        add_settings_section( 'pitchdeck_api_section',         'API Keys',    '__return_false', self::OPTION_PAGE );
+        add_settings_section( 'pitchdeck_woocommerce_section', 'WooCommerce', '__return_false', self::OPTION_PAGE );
+
+        add_settings_field( self::OPTION_OPENAI,     'OpenAI API Key',      [ __CLASS__, 'render_api_key_field' ],          self::OPTION_PAGE, 'pitchdeck_api_section' );
+        add_settings_field( self::OPTION_ELEVENLABS, 'ElevenLabs API Key',  [ __CLASS__, 'render_elevenlabs_api_key_field' ], self::OPTION_PAGE, 'pitchdeck_api_section' );
+        add_settings_field( self::OPTION_PRODUCT_ID, 'Pitchdeck Product ID', [ __CLASS__, 'render_product_id_field' ],       self::OPTION_PAGE, 'pitchdeck_woocommerce_section' );
+
+        // Texts
         register_setting(
             self::OPTION_GROUP,
-            self::OPTION_OPENAI,
+            self::OPTION_TEXTS,
             [
-                'type'              => 'string',
-                'sanitize_callback' => 'sanitize_text_field',
-                'default'           => '',
+                'type'              => 'array',
+                'sanitize_callback' => [ __CLASS__, 'sanitize_texts' ],
+                'default'           => [],
             ]
         );
 
-        add_settings_section(
-            'pitchdeck_api_section',
-            'API Keys',
-            '__return_false',
-            self::OPTION_PAGE
-        );
+        add_settings_section( 'pitchdeck_texts_section', 'Texts &amp; Labels', '__return_false', self::OPTION_PAGE );
 
         add_settings_field(
-            self::OPTION_OPENAI,
-            'OpenAI API Key',
-            [ __CLASS__, 'render_api_key_field' ],
+            self::OPTION_TEXTS,
+            '',
+            [ __CLASS__, 'render_texts_field' ],
             self::OPTION_PAGE,
-            'pitchdeck_api_section'
+            'pitchdeck_texts_section'
         );
+    }
 
-        register_setting(
-            self::OPTION_GROUP,
-            self::OPTION_ELEVENLABS,
-            [
-                'type'              => 'string',
-                'sanitize_callback' => 'sanitize_text_field',
-                'default'           => '',
-            ]
-        );
+    public static function sanitize_texts( $input ): array {
+        $clean = [];
+        foreach ( self::text_definitions() as $key => $def ) {
+            if ( ! isset( $input[ $key ] ) ) {
+                continue;
+            }
+            $clean[ $key ] = 'textarea' === $def['type']
+                ? sanitize_textarea_field( $input[ $key ] )
+                : sanitize_text_field( $input[ $key ] );
+        }
+        return $clean;
+    }
 
-        add_settings_field(
-            self::OPTION_ELEVENLABS,
-            'ElevenLabs API Key',
-            [ __CLASS__, 'render_elevenlabs_api_key_field' ],
-            self::OPTION_PAGE,
-            'pitchdeck_api_section'
-        );
+    // ── Field renderers ───────────────────────────────────────────────
 
-        register_setting(
-            self::OPTION_GROUP,
-            self::OPTION_PRODUCT_ID,
-            [
-                'type'              => 'integer',
-                'sanitize_callback' => 'absint',
-                'default'           => 0,
-            ]
-        );
+    public static function render_texts_field(): void {
+        $defs  = self::text_definitions();
+        $saved = (array) get_option( self::OPTION_TEXTS, [] );
 
-        add_settings_section(
-            'pitchdeck_woocommerce_section',
-            'WooCommerce',
-            '__return_false',
-            self::OPTION_PAGE
-        );
+        $sections = [
+            'popup'   => 'Popup window',
+            'nav'     => 'Navigation steps',
+            'panel1'  => 'Panel 1 – Landing',
+            'panel2'  => 'Panel 2 – Upload',
+            'panel3'  => 'Panel 3 – Scripts',
+            'panel4'  => 'Panel 4 – Video',
+            'dynamic' => 'Dynamic messages (JS)',
+        ];
 
-        add_settings_field(
-            self::OPTION_PRODUCT_ID,
-            'Pitchdeck Product ID',
-            [ __CLASS__, 'render_product_id_field' ],
-            self::OPTION_PAGE,
-            'pitchdeck_woocommerce_section'
-        );
+        foreach ( $sections as $section_key => $section_label ) {
+            echo '<h3 style="margin-top:2em;padding-top:1em;border-top:1px solid #ddd;">' . esc_html( $section_label ) . '</h3>';
+            echo '<table class="form-table" role="presentation"><tbody>';
+
+            foreach ( $defs as $key => $def ) {
+                if ( $def['section'] !== $section_key ) {
+                    continue;
+                }
+
+                $value      = $saved[ $key ] ?? '';
+                $field_name = self::OPTION_TEXTS . '[' . $key . ']';
+                $field_id   = 'pd_text_' . $key;
+
+                echo '<tr>';
+                echo '<th scope="row" style="width:220px;"><label for="' . esc_attr( $field_id ) . '">' . esc_html( $def['label'] ) . '</label></th>';
+                echo '<td>';
+
+                if ( 'textarea' === $def['type'] ) {
+                    echo '<textarea id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $field_name ) . '" rows="3" class="large-text">' . esc_textarea( $value ) . '</textarea>';
+                } else {
+                    echo '<input type="text" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $field_name ) . '" value="' . esc_attr( $value ) . '" class="regular-text" />';
+                }
+
+                echo '<p class="description" style="color:#888;">Default: ' . esc_html( $def['default'] ) . '</p>';
+                echo '</td>';
+                echo '</tr>';
+            }
+
+            echo '</tbody></table>';
+        }
     }
 
     public static function render_api_key_field(): void {

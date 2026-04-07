@@ -2,11 +2,18 @@
 (function () {
     'use strict';
 
-    const { rest_url, nonce } = window.pitchdeck_config;
+    const { rest_url, nonce, texts } = window.pitchdeck_config;
+
+    function t(key, n) {
+        var str = (texts && texts[key]) || key;
+        return n !== undefined ? str.replace('{n}', n) : str;
+    }
 
     let currentJobId = null;
 
     document.addEventListener('DOMContentLoaded', function () {
+        showWelcomePopup();
+
         document.getElementById('pd-get-started-btn')
             .addEventListener('click', function () { showStep(2); });
 
@@ -59,6 +66,19 @@
 
         wireDropzone();
     });
+
+    /* ── Welcome popup ────────────────────────────────────────────── */
+
+    function showWelcomePopup() {
+        var popup = document.getElementById('pd-welcome-popup');
+        if (!popup) return;
+        popup.hidden = false;
+
+        document.getElementById('pd-welcome-close-btn')
+            .addEventListener('click', function () {
+                popup.hidden = true;
+            });
+    }
 
     /* ── Step navigation ──────────────────────────────────────────── */
 
@@ -125,7 +145,7 @@
         const language = langSelect ? langSelect.value : 'Finnish';
 
         // 1. Upload and extract
-        showOverlay('Ladataan ja puretaan dioja,\u2026');
+        showOverlay(t('overlay_upload'));
 
         let slides;
         try {
@@ -154,7 +174,7 @@
         }
 
         // 2. Save slides
-        showOverlay('Tallennetaan ' + slides.length + ' dia\u2026');
+        showOverlay(t('overlay_save', slides.length));
 
         try {
             const slidesToSave = slides.map(function (s) {
@@ -180,7 +200,7 @@
         }
 
         // 3. Generate scripts
-        showOverlay('Luodaan käsikirjoitusta,\u2026 tämä voi kestää hetken.');
+        showOverlay(t('overlay_script'));
 
         try {
             const scriptResp = await fetch(rest_url + '/generate-script', {
@@ -218,14 +238,14 @@
             card.dataset.slide  = item.slide_number;
 
             card.innerHTML =
-                '<h3>Dia ' + item.slide_number + '</h3>' +
+                '<h3>' + t('slide_label') + ' ' + item.slide_number + '</h3>' +
                 '<textarea' +
                 '  id="script-text-' + item.slide_number + '"' +
                 '  class="pitchdeck-script-textarea"' +
                 '  rows="4"' +
                 '>' + escapeHtml(item.script_text || '') + '</textarea>' +
                 '<div class="pd-card-footer">' +
-                '  <button class="pitchdeck-generate-slide-audio-btn" data-slide="' + item.slide_number + '">Luo äänitys tälle dialle</button>' +
+                '  <button class="pitchdeck-generate-slide-audio-btn" data-slide="' + item.slide_number + '">' + t('btn_slide_audio') + '</button>' +
                 '</div>';
 
             container.appendChild(card);
@@ -312,7 +332,7 @@
             return;
         }
 
-        showOverlay('Luodaan äänitys dialle ' + slideNumber + '\u2026');
+        showOverlay(t('overlay_slide_audio', slideNumber));
         const scripts = collectScripts();
 
         try {
@@ -344,7 +364,7 @@
             return;
         }
 
-        showOverlay('Luodaan äänityksiä\u2026 tämä voi kestää hetken.');
+        showOverlay(t('overlay_audio'));
         const scripts = collectScripts();
 
         try {
@@ -381,7 +401,7 @@
             return;
         }
 
-        showOverlay('Luodaan videota.\u2026 tämä voi kestää useita minuutteja.');
+        showOverlay(t('overlay_video'));
 
         try {
             const response = await fetch(rest_url + '/generate-video', {
@@ -415,7 +435,7 @@
             return;
         }
 
-        showOverlay('Siirrytään kassalle\u2026');
+        showOverlay(t('overlay_checkout'));
 
         try {
             const response = await fetch(rest_url + '/checkout', {
