@@ -125,7 +125,7 @@
         const language = langSelect ? langSelect.value : 'Finnish';
 
         // 1. Upload and extract
-        showOverlay('Ladataan ja puretaan diat\u2026');
+        showOverlay('Ladataan ja puretaan dioja,\u2026');
 
         let slides;
         try {
@@ -180,7 +180,7 @@
         }
 
         // 3. Generate scripts
-        showOverlay('Luodaan skriptejä tekoälyn avulla\u2026 tämä voi kestää hetken.');
+        showOverlay('Luodaan käsikirjoitusta avulla\u2026 tämä voi kestää hetken.');
 
         try {
             const scriptResp = await fetch(rest_url + '/generate-script', {
@@ -381,7 +381,7 @@
             return;
         }
 
-        showOverlay('Renderöidään diojen kuvia ja enkoodataan video\u2026 tämä voi kestää minuutin.');
+        showOverlay('Luodaan videota.\u2026 tämä voi kestää useita minuutteja.');
 
         try {
             const response = await fetch(rest_url + '/generate-video', {
