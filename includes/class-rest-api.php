@@ -592,11 +592,15 @@ class Pitchdeck_REST_API {
      * POST /wp-json/pitchdeck/v1/checkout
      *
      * Accepts: application/json { job_id: string }
-     * Stores job_id in WC session, empties cart, adds the configured pitchdeck
-     * product, then returns the WooCommerce checkout URL for JS to redirect to.
+     *
+     * Stores the job_id in a short-lived transient keyed by a random token,
+     * then returns a WooCommerce add-to-cart URL that carries the token.
+     * The WooCommerce filter in Pitchdeck_WooCommerce picks up the token on
+     * the next regular page request (where WC is fully initialized) and injects
+     * the job_id into the cart item — no cart/session manipulation here.
      */
     public static function handle_checkout( WP_REST_Request $request ) {
-        if ( ! function_exists( 'WC' ) ) {
+        if ( ! function_exists( 'wc_get_product' ) ) {
             return new WP_Error( 'woocommerce_missing', 'WooCommerce is not active.', [ 'status' => 500 ] );
         }
 
@@ -618,21 +622,26 @@ class Pitchdeck_REST_API {
             return new WP_Error( 'no_video', 'Videota ei löydy. Luo video ensin.', [ 'status' => 404 ] );
         }
 
-        // Ensure WC session cookie is sent with this response so the cart
-        // and session survive the redirect to the checkout page.
-        if ( WC()->session && ! WC()->session->has_session() ) {
-            WC()->session->set_customer_session_cookie( true );
-        }
+        // Store job_id in a transient; expires in 1 hour in case the customer
+        // abandons the checkout flow and comes back.
+        $token = wp_generate_password( 32, false );
+        set_transient( 'pitchdeck_job_' . $token, $job_id, HOUR_IN_SECONDS );
 
-        // Persist the job_id so it can be attached to the order on creation.
-        WC()->session->set( 'pitchdeck_job_id', $job_id );
-
-        WC()->cart->empty_cart();
-        WC()->cart->add_to_cart( $product_id );
+        // Build a standard WC add-to-cart URL. Pitchdeck_WooCommerce hooks
+        // into woocommerce_add_cart_item_data to read the token and inject
+        // the job_id, and into woocommerce_add_to_cart_redirect to skip the
+        // cart page and land directly on checkout.
+        $add_to_cart_url = add_query_arg(
+            [
+                'add-to-cart'     => $product_id,
+                'pitchdeck_token' => $token,
+            ],
+            home_url( '/' )
+        );
 
         return rest_ensure_response( [
             'success'      => true,
-            'checkout_url' => wc_get_checkout_url(),
+            'checkout_url' => $add_to_cart_url,
         ] );
     }
 
