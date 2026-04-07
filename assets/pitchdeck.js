@@ -180,7 +180,7 @@
         }
 
         // 3. Generate scripts
-        showOverlay('Luodaan käsikirjoitusta avulla\u2026 tämä voi kestää hetken.');
+        showOverlay('Luodaan käsikirjoitusta,\u2026 tämä voi kestää hetken.');
 
         try {
             const scriptResp = await fetch(rest_url + '/generate-script', {
